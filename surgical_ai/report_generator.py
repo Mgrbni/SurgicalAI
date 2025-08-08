@@ -17,7 +17,9 @@ class ReportGenerator:
         """Create a procedural report from context data."""
         summary = (
             f"Flap Status: {context.get('flap_status', 'unknown')}; "
-            f"Rotation Angle: {context.get('rotation_angle', 'n/a')}"
+            f"Rotation Angle: {context.get('rotation_angle', 'n/a')}; "
+            f"Decision: {context.get('decision', 'n/a')}; "
+            f"Contraindication: {context.get('contraindication', 'n/a')}"
         )
         return Report(summary=summary, data=context)
 
