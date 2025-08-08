@@ -11,6 +11,19 @@ from .structural_integrity_validator import (
 )
 from .self_audit_checker import SelfAuditChecker, AuditResult, AuditLog
 from .report_generator import ReportGenerator, Report
+from .facial_analysis import (
+    ScanIngestor,
+    ScanData,
+    LandmarkDetector,
+    Landmarks,
+    LesionDetector,
+    LesionAnalysis,
+    FlapDesignEngine,
+    FlapSuggestion,
+    SurgicalVisualizer,
+    OutputLogger,
+    run_pipeline,
+)
 
 __all__ = [
     "CognitiveDecisionEngine",
@@ -24,4 +37,15 @@ __all__ = [
     "AuditLog",
     "ReportGenerator",
     "Report",
+    "ScanIngestor",
+    "ScanData",
+    "LandmarkDetector",
+    "Landmarks",
+    "LesionDetector",
+    "LesionAnalysis",
+    "FlapDesignEngine",
+    "FlapSuggestion",
+    "SurgicalVisualizer",
+    "OutputLogger",
+    "run_pipeline",
 ]
