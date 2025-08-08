@@ -11,14 +11,19 @@ class Landmarks:
 
 
 class LandmarkDetector:
-    """Detects anatomical landmarks and tension lines."""
+    """Detects anatomical landmarks, tension lines, and anatomical overlays."""
 
     def detect_landmarks(self, scan_data: Any) -> Landmarks:
-        """Detect landmarks on normalized scan."""
-        # Placeholder: use facial landmark libraries.
+        """Detect key facial landmarks on a normalized scan."""
+        # Placeholder: use `face-alignment`, `mediapipe`, or `dlib` libraries.
         return Landmarks(points={})
 
     def map_tension_lines(self, scan_data: Any) -> Any:
         """Estimate Langer's lines or skin tension map."""
         # Placeholder: compute or approximate tension lines.
+        return None
+
+    def overlay_anatomy(self, scan_data: Any) -> Any:
+        """Overlay muscles, vessels, or dermal layers for reference."""
+        # Placeholder: integrate anatomical atlases.
         return None

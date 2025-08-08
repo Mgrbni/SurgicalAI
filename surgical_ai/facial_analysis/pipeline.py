@@ -21,14 +21,26 @@ def run_pipeline(scan_path: Path) -> Dict[str, Any]:
 
     scan = ingestor.load_scan(scan_path)
     landmarks = detector.detect_landmarks(scan)
+    tension = detector.map_tension_lines(scan)
+    anatomy = detector.overlay_anatomy(scan)
+
     lesion = lesion_model.classify(None)
-    flap = flap_engine.suggest_flap({})
-    visualizer.render(scan, lesion.heatmap, flap)
+    heatmap_3d = lesion_model.map_heatmap_to_3d(lesion.heatmap, scan)
+
+    flap = flap_engine.suggest_flap(
+        {"landmarks": landmarks, "tension": tension, "lesion": lesion}
+    )
+
+    visualizer.render(scan, heatmap_3d, flap, anatomy)
+
     logger.export_report({}, Path("report.pdf"))
     logger.save_metadata({}, Path("analysis.json"))
+    logger.export_dicom({}, Path("analysis.dcm"))
+
     return {
         "scan": scan,
         "landmarks": landmarks,
+        "tension": tension,
         "lesion": lesion,
         "flap": flap,
     }

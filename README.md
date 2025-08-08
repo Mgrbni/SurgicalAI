@@ -35,3 +35,13 @@ from surgical_ai.facial_analysis import run_pipeline as facial_run
 results = facial_run(Path("face_scan.ply"))
 print(results["flap"].flap_type)
 ```
+
+### Sample Facial Analysis Output
+
+```
+Diagnosis: 51% probability of melanoma
+Lesion Coordinates (X=23.1, Y=48.7, Z=3.8)
+Suggested Flap: Rotation flap from lateral cheek
+Tension Zone: Zygomatic to mandibular angle
+Predicted Success Rate: 93%
+```
