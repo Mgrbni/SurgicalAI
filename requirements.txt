@@ -1,0 +1,15 @@
+# Core libraries for the SurgicalAI prototype
+pytorch
+torchvision
+open3d
+trimesh
+vedo
+face-alignment
+mediapipe
+dlib
+torchcam
+captum
+plotly
+matplotlib
+pandas
+reportlab
