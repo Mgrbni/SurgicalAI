@@ -15,3 +15,8 @@ class OutputLogger:
         """Save analysis metadata to JSON or CSV."""
         # Placeholder: use json or pandas.
         return None
+
+    def export_dicom(self, data: Any, path: Path) -> None:
+        """Optionally export results in DICOM format."""
+        # Placeholder: integrate with pydicom for metadata export.
+        return None

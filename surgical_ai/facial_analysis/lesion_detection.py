@@ -12,7 +12,7 @@ class LesionAnalysis:
 
 
 class LesionDetector:
-    """Classifies lesions and produces heatmaps."""
+    """Classifies lesions and produces Grad-CAM heatmaps."""
 
     def classify(self, image: Any) -> LesionAnalysis:
         """Run lesion classification model.
@@ -20,12 +20,18 @@ class LesionDetector:
         Parameters
         ----------
         image: Any
-            2D projection or UV map derived from scan.
+            2D projection or UV map derived from the 3D scan.
 
         Returns
         -------
         LesionAnalysis
-            Probability and heatmap placeholder.
+            Probability and heatmap placeholders generated from a
+            pretrained CNN (e.g., ResNet-50).
         """
-        # Placeholder: run model and generate Grad-CAM.
+        # Placeholder: run model and generate Grad-CAM heatmap.
         return LesionAnalysis(probability=0.0, heatmap=None)
+
+    def map_heatmap_to_3d(self, heatmap: Any, scan_data: Any) -> Any:
+        """Map a 2D heatmap back onto the 3D scan surface."""
+        # Placeholder: project UV heatmap coordinates to mesh vertices.
+        return None

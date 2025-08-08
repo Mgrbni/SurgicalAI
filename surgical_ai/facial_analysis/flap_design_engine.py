@@ -9,6 +9,7 @@ class FlapSuggestion:
 
     flap_type: str
     axis: float
+    angle: float
     success_probability: float
 
 
@@ -21,12 +22,16 @@ class FlapDesignEngine:
         Parameters
         ----------
         context: Dict[str, Any]
-            Information about lesion location and tension lines.
+            Information about lesion location, tension lines, and other
+            anatomical constraints.
 
         Returns
         -------
         FlapSuggestion
-            Placeholder suggestion with flap type and metrics.
+            Placeholder suggestion with flap type, rotation axis/angle,
+            and predicted success probability.
         """
-        # Placeholder: rule-based suggestion.
-        return FlapSuggestion(flap_type="rotation", axis=0.0, success_probability=0.0)
+        # Placeholder: basic rule-based suggestion.
+        return FlapSuggestion(
+            flap_type="rotation", axis=0.0, angle=0.0, success_probability=0.0
+        )
