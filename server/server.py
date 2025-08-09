@@ -40,6 +40,19 @@ def _needs_token_fallback(exc: Exception) -> bool:
     s = str(exc).lower()
     return "unsupported parameter" in s and ("max_tokens" in s or "max_output_tokens" in s)
 
+NO_TEMP_MODELS = (
+    "o1",
+    "o1-mini",
+    "o3",
+    "o3-mini",
+    "gpt-5",
+    "gpt-5-thinking",
+)
+
+
+def _supports_temperature(model: str) -> bool:
+    return not any(model.startswith(m) for m in NO_TEMP_MODELS)
+
 app = FastAPI(title="SurgicalAI API")
 
 # CORS (be permissive for demo; lock down in prod)
@@ -83,17 +96,18 @@ def infer(
         )
 
     model = req.model or SETTINGS.model
-    temp = SETTINGS.temperature if req.temperature is None else req.temperature
+    temp = req.temperature
     max_tokens = min(req.max_output_tokens or SETTINGS.max_output_tokens,
                      SETTINGS.caps.get("max_tokens_per_request", 2000))
     # CREATE (non-JSON mode)
-    def call_create(prompt: str, model: str, temp: float, n: int):
+    def call_create(prompt: str, model: str, temp: float | None, n: int):
         base = dict(
             model=model,
             input=[{"role": "user", "content": prompt}],
-            temperature=temp,
             timeout=SETTINGS.timeout_s,
         )
+        if temp is not None and _supports_temperature(model):
+            base["inference_config"] = {"temperature": temp}
         try:
             return client.responses.create(**_with_max_output(base, n))
         except Exception as e:
@@ -102,14 +116,15 @@ def infer(
             raise
 
     # PARSE (Structured Outputs / json_schema=True)
-    def call_parse(prompt: str, model: str, temp: float, n: int):
+    def call_parse(prompt: str, model: str, temp: float | None, n: int):
         base = dict(
             model=model,
             input=prompt,
-            temperature=temp,
             response_format=LesionReport,
             timeout=SETTINGS.timeout_s,
         )
+        if temp is not None and _supports_temperature(model):
+            base["inference_config"] = {"temperature": temp}
         try:
             return client.responses.parse(**_with_max_output(base, n))
         except Exception as e:
@@ -135,17 +150,19 @@ def infer(
 @app.post("/api/stream")  # streaming for long replies
 def stream(req: InferenceReq):
     model = req.model or SETTINGS.model
-    temp = SETTINGS.temperature if req.temperature is None else req.temperature
+    temp = req.temperature
     max_tokens = min(req.max_output_tokens or SETTINGS.max_output_tokens,
                      SETTINGS.caps.get("max_tokens_per_request", 2000))
 
     def _stream_kwargs(prompt, model, temp, n):
-        return dict(
+        k = dict(
             model=model,
             input=[{"role": "user", "content": prompt}],
-            temperature=temp,
             timeout=SETTINGS.timeout_s,
         )
+        if temp is not None and _supports_temperature(model):
+            k["inference_config"] = {"temperature": temp}
+        return k
 
     def gen():
         base = _stream_kwargs(req.prompt, model, temp, max_tokens)
