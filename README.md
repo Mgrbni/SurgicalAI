@@ -1,49 +1,54 @@
-# surgicalai
+# SurgicalAI
 
-Research prototype for surgical planning and visualization.
+**Research Prototype – Not for Clinical Use**
 
-## Quickstart
+Minimal pipeline demonstrating analysis, planning and visualization for reconstructive surgery.
+
+## One Command Demo
 
 ```bash
 pip install -r requirements.txt
 pip install -e .
+
+surgicalai demo --out outputs/demo
 ```
 
-Run demo:
+To include an OpenAI generated narrative, set `OPENAI_API_KEY` and run:
 
 ```bash
-surgicalai demo
+surgicalai demo --out outputs/demo --with-llm --model gpt-4o
 ```
 
-Run API/UI:
+Outputs are written to the specified folder and include meshes, JSON files, images and a PDF report.
+
+## API and UI
+
+Start the API:
 
 ```bash
-surgicalai ingest
-surgicalai analyze
-surgicalai plan
-surgicalai visualize
+python -m surgicalai.api
 ```
 
-## Architecture
+Launch the Gradio UI:
 
-```
-surgicalai
-├── surgicalai/        # core package
-│   ├── cli.py
-│   ├── config.py
-│   └── utils/
-├── models/            # model weights
-└── data/
-    ├── samples/
-    └── anatomy/
+```bash
+python -m surgicalai.ui
 ```
 
-## Medical Disclaimer
+## LLM Usage
 
-Research prototype. Not for clinical use.
+Only de-identified numeric summaries are sent to the OpenAI API. Meshes and images never leave the machine.
 
-## Troubleshooting
+## Development
 
-- Ensure dependencies are installed with `pip install -r requirements.txt`.
-- Use `python -m pip install --upgrade pip` if installations fail.
-- For rendering issues, verify Open3D support on your platform.
+Run tests with:
+
+```bash
+pytest -q
+```
+
+See [docs/IO_SCHEMA.md](docs/IO_SCHEMA.md) for data contracts.
+
+## License
+
+Apache-2.0

@@ -1,13 +1,18 @@
 numpy
 scipy
-pillow
-matplotlib
-opencv-python
+open3d
 trimesh
-shapely
+torch
+torchvision
+pillow
+opencv-python
 scikit-image
-rich
 pydantic
-pyyaml
-torch; platform_system == "Windows"
-torchvision; platform_system == "Windows"
+typer
+rich
+pytorch-grad-cam
+fastapi
+uvicorn
+matplotlib
+reportlab
+openai
