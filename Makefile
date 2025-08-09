@@ -1,18 +1,15 @@
-.PHONY: demo setup clean sample
-VENV?=.venv
-PY=$(VENV)/bin/python
+.PHONY: demo install run
 
-setup:
-	python -m venv $(VENV)
-	$(PY) -m pip install --upgrade pip
-	$(PY) -m pip install -e ".[demo]"
+demo:
+@test -f .env || (echo "Copy .env.example to .env and fill OPENAI_API_KEY"; exit 1)
+python -m venv .venv && . .venv/bin/activate && pip install -U pip
+. .venv/bin/activate && pip install -r requirements.txt
+. .venv/bin/activate && uvicorn server.server:app --host 0.0.0.0 --port 8000
 
-sample:
-	$(PY) -m surgicalai.tools.make_sample --out data/lesions_sample --n 8 --seed 1337
+install:
+python -m venv .venv && . .venv/bin/activate && pip install -U pip && pip install -r requirements.txt
 
-demo: setup sample
-	$(PY) -m surgicalai.demo --input data/lesions_sample --cpu --offline-llm --out runs/demo
-	python -c "import webbrowser, pathlib as p; webbrowser.open(p.Path(runs/demo).resolve().as_uri())"
+run:
+@test -f .env || (echo "Copy .env.example to .env and fill OPENAI_API_KEY"; exit 1)
+. .venv/bin/activate && uvicorn server.server:app --host 0.0.0.0 --port 8000
 
-clean:
-	rm -rf $(VENV) runs/demo data/lesions_sample

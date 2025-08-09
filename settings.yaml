@@ -1,0 +1,8 @@
+model: "gpt-5-mini"     # fast UI glue; pin heavier routes to "gpt-5"
+temperature: 0.2
+max_output_tokens: 800
+ui_streaming: true
+
+caps:
+  max_tokens_per_request: 1200
+  max_tokens_per_session: 6000

@@ -1,67 +1,78 @@
-# SurgicalAI
+# SurgicalAI — GPT‑wired Demo
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+FastAPI server + tiny static client using OpenAI **Responses API** with **Structured Outputs** and streaming. Keys stay server‑side. Retries/backoff + token caps protect demo day.
 
-**Research Prototype – Not for Clinical Use**
-
-Minimal pipeline for reconstructive surgery research.
-
-## One-Command Demo
+## Quickstart
 
 ```bash
-git clone <repo> && cd SurgicalAI
-make demo
+cp .env.example .env   # paste your OPENAI_API_KEY
+make demo              # installs deps, runs uvicorn on :8000
 ```
 
-Outputs appear in `runs/demo/` and open in a browser. The demo uses only synthetic data and runs entirely on CPU. See [docs/IO_SCHEMA.md](docs/IO_SCHEMA.md) for the output contract.
+Open http://localhost:8000 to use the client UI.
 
-## CLI
+Endpoints
+•GET /healthz — service health + current default model
+•POST /api/infer — non-streaming; set "json_schema": true to enforce LesionReport schema
+•POST /api/stream — streaming text for fast-feel UI
 
-```
-surgicalai demo --input data/lesions_sample --cpu --offline-llm --out runs/demo
-surgicalai train --data data/lesions_sample
-surgicalai evaluate --checkpoint toy.pt
-surgicalai api --host 0.0.0.0 --port 8000
-surgicalai ui
-```
+Example (Structured Outputs)
 
-Flags:
-- `--offline-llm` (default) prevents any network calls.
-- `--cpu` forces CPU execution.
+POST /api/infer
+{
+  "prompt": "Produce a LesionReport for a 12mm pigmented lesion over left malar area; include Grad-CAM hotspots and a rotation flap suggestion following Langer lines.",
+  "json_schema": true
+}
 
-## Docker (optional)
+Returns a strict JSON object conforming to LesionReport.
+
+Notes
+•Uses responses.create/stream/parse (unified API surface).
+•For browser realtime, mint ephemeral tokens server-side (not included here).
+•Token/time caps are set in settings.yaml.
+
+---
+
+## AFTER WRITING FILES — VERIFY & RUN
+
+1) Create virtualenv, install deps, run server:
+- Prefer `make demo`
+- If Make isn’t available, run:
+  - `python -m venv .venv`
+  - `. .venv/bin/activate`
+  - `pip install -r requirements.txt`
+  - `uvicorn server.server:app --host 0.0.0.0 --port 8000`
+
+2) Open `http://localhost:8000`, type a prompt, click **Infer** or **Stream**.
+3) Structured JSON requires the checkbox in the UI.
+
+Print any errors you encounter and fix them automatically.
+
+---
+
+## GIT INIT & PUSH TO GITHUB
+
+Now initialize a git repo inside `SurgicalAI/`, make the first commit, set the remote, and push:
+
+- If I provided GitHub URL, user.name, and user.email, run these commands (shell):
 
 ```bash
-docker build -t ghcr.io/<YOURORG>/surgicalai:dev .
+cd SurgicalAI
+git init
+git branch -M main
+git add .
+git -c user.name="{{GIT_USER_NAME}}" -c user.email="{{GIT_USER_EMAIL}}" commit -m "feat: initial GPT-wired demo (FastAPI + Responses API + Structured Outputs + streaming)"
+git remote add origin {{GITHUB_REPO_URL}}
+git push -u origin main
 ```
 
-GHCR TBD.
+Replace {{…}} placeholders with the values I gave you.
+•If I didn’t provide values, print the exact commands with placeholders and instructions to paste them in my terminal.
 
-## Packaging
+Finally, echo a short checklist:
+•cp .env.example .env and set OPENAI_API_KEY
+•make demo
+•Open http://localhost:8000
+•Try a structured request (toggle “Structured JSON”)
 
-```bash
-surgicalai package
-dist/SurgicalAI --demo --out outputs/demo_exe
-```
-
-Troubleshooting PyInstaller: if packaging fails due to missing DLLs or data (e.g., `torch`, `torchvision`, or `open3d`), add `--hidden-import` or `--collect-all <pkg>` in `surgicalai.spec`.
-
-## Privacy
-
-See [docs/PRIVACY.md](docs/PRIVACY.md) for data flow and guarantees.
-
-## Development
-
-```bash
-ruff check .
-black --check .
-mypy surgicalai
-pytest -q
-make demo
-```
-
-No binaries are committed; CI builds artifacts.
-
-## License
-
-Apache-2.0
+End of instructions. Execute now.

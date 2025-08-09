@@ -1,7 +1,0 @@
-library: okhttp-gson
-artifactId: surgicalai-client
-groupId: io.github.OWNER   # replace OWNER in pom.xml distribution URL too
-artifactVersion: 1.0.0
-dateLibrary: java8
-hideGenerationTimestamp: true
-useRuntimeException: true
