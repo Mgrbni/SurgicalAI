@@ -5,8 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>SurgicalAI.Client</PackageId>
     <Version>1.0.0</Version>
-    <Authors>openai</Authors>
-    <RepositoryUrl>https://github.com/openai/SurgicalAI</RepositoryUrl>
+    <Authors>YOURNAME</Authors> <!-- replace -->
+    <RepositoryUrl>https://github.com/YOURORG/SurgicalAI</RepositoryUrl> <!-- replace -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 </Project>

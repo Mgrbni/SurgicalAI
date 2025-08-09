@@ -63,5 +63,14 @@ def ui() -> None:
     ui_mod.launch()
 
 
+@app.command()
+def package() -> None:
+    """Build standalone executable via PyInstaller."""
+    import PyInstaller.__main__
+
+    spec = Path(__file__).resolve().parent.parent / "surgicalai.spec"
+    PyInstaller.__main__.run([str(spec)])
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

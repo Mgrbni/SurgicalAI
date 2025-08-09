@@ -6,14 +6,14 @@
 
 Minimal pipeline for reconstructive surgery research.
 
-## Quickstart
+## One-Command Demo
 
 ```bash
 git clone <repo> && cd SurgicalAI
 make demo
 ```
 
-Outputs appear in `runs/demo/` and open in a browser. The demo uses only synthetic data and runs entirely on CPU.
+Outputs appear in `runs/demo/` and open in a browser. The demo uses only synthetic data and runs entirely on CPU. See [docs/IO_SCHEMA.md](docs/IO_SCHEMA.md) for the output contract.
 
 ## CLI
 
@@ -36,6 +36,15 @@ docker build -t ghcr.io/<YOURORG>/surgicalai:dev .
 ```
 
 GHCR TBD.
+
+## Packaging
+
+```bash
+surgicalai package
+dist/SurgicalAI --demo --out outputs/demo_exe
+```
+
+Troubleshooting PyInstaller: if packaging fails due to missing DLLs or data (e.g., `torch`, `torchvision`, or `open3d`), add `--hidden-import` or `--collect-all <pkg>` in `surgicalai.spec`.
 
 ## Privacy
 
