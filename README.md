@@ -1,5 +1,7 @@
 # SurgicalAI
 
+[![codecov](https://codecov.io/gh/<owner>/<repo>/branch/main/graph/badge.svg)](https://codecov.io/gh/<owner>/<repo>)
+
 **Research Prototype – Not for Clinical Use**
 
 Minimal pipeline demonstrating analysis, planning and visualization for reconstructive surgery.
