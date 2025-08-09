@@ -1,0 +1,15 @@
+[run]
+branch = True
+source =
+    surgicalai
+omit =
+    */__init__.py
+    */tests/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    if __name__ == '__main__':
+show_missing = True
+precision = 2
