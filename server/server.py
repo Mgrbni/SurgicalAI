@@ -21,6 +21,25 @@ if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY not set")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+# --- token fallback helpers ---
+def _with_max_output(kwargs: dict, n: int):
+    k = dict(kwargs)
+    k.pop("max_completion_tokens", None)
+    k["max_output_tokens"] = n
+    return k
+
+
+def _with_max_completion(kwargs: dict, n: int):
+    k = dict(kwargs)
+    k.pop("max_output_tokens", None)
+    k["max_completion_tokens"] = n
+    return k
+
+
+def _needs_token_fallback(exc: Exception) -> bool:
+    s = str(exc).lower()
+    return "unsupported parameter" in s and ("max_tokens" in s or "max_output_tokens" in s)
+
 app = FastAPI(title="SurgicalAI API")
 
 # CORS (be permissive for demo; lock down in prod)
@@ -67,40 +86,46 @@ def infer(
     temp = SETTINGS.temperature if req.temperature is None else req.temperature
     max_tokens = min(req.max_output_tokens or SETTINGS.max_output_tokens,
                      SETTINGS.caps.get("max_tokens_per_request", 2000))
+    # CREATE (non-JSON mode)
+    def call_create(prompt: str, model: str, temp: float, n: int):
+        base = dict(
+            model=model,
+            input=[{"role": "user", "content": prompt}],
+            temperature=temp,
+            timeout=SETTINGS.timeout_s,
+        )
+        try:
+            return client.responses.create(**_with_max_output(base, n))
+        except Exception as e:
+            if _needs_token_fallback(e):
+                return client.responses.create(**_with_max_completion(base, n))
+            raise
+
+    # PARSE (Structured Outputs / json_schema=True)
+    def call_parse(prompt: str, model: str, temp: float, n: int):
+        base = dict(
+            model=model,
+            input=prompt,
+            temperature=temp,
+            response_format=LesionReport,
+            timeout=SETTINGS.timeout_s,
+        )
+        try:
+            return client.responses.parse(**_with_max_output(base, n))
+        except Exception as e:
+            if _needs_token_fallback(e):
+                return client.responses.parse(**_with_max_completion(base, n))
+            raise
 
     def call():
         if req.json_schema:
-            # Structured Outputs: enforce Pydantic schema
-            response_format = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "lesion_report",
-                    "strict": True,
-                    "schema": LesionReport.model_json_schema(),
-                },
-            }
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": req.prompt}],
-                temperature=temp,
-                max_tokens=max_tokens,
-                timeout=SETTINGS.timeout_s,
-                response_format=response_format,
-            )
-            content = resp.choices[0].message.content
-            parsed = LesionReport.model_validate_json(content)
-            data = parsed.model_dump()
+            resp = call_parse(req.prompt, model, temp, max_tokens)
+            parsed = resp.output_parsed
+            data = parsed.dict() if hasattr(parsed, "dict") else parsed
             return JSONResponse({"ok": True, "data": data})
         else:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": req.prompt}],
-                temperature=temp,
-                max_tokens=max_tokens,
-                timeout=SETTINGS.timeout_s,
-            )
-            text = resp.choices[0].message.content
-            return {"ok": True, "text": text}
+            resp = call_create(req.prompt, model, temp, max_tokens)
+            return {"ok": True, "text": resp.output_text}
 
     try:
         return retry_policy(call)
@@ -114,21 +139,32 @@ def stream(req: InferenceReq):
     max_tokens = min(req.max_output_tokens or SETTINGS.max_output_tokens,
                      SETTINGS.caps.get("max_tokens_per_request", 2000))
 
+    def _stream_kwargs(prompt, model, temp, n):
+        return dict(
+            model=model,
+            input=[{"role": "user", "content": prompt}],
+            temperature=temp,
+            timeout=SETTINGS.timeout_s,
+        )
+
     def gen():
+        base = _stream_kwargs(req.prompt, model, temp, max_tokens)
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": req.prompt}],
-                temperature=temp,
-                max_tokens=max_tokens,
-                timeout=SETTINGS.timeout_s,
-                stream=True,
-            )
-            for chunk in response:
-                if chunk.choices and chunk.choices[0].delta.content is not None:
-                    yield chunk.choices[0].delta.content
+            ctx = client.responses.stream(**_with_max_output(base, max_tokens))
+            use_completion = False
         except Exception as e:
-            yield f"\n\n[STREAM_ERROR] {e}"
+            if _needs_token_fallback(e):
+                ctx = client.responses.stream(**_with_max_completion(base, max_tokens))
+                use_completion = True
+            else:
+                yield f"\n\n[STREAM_ERROR] {e}"
+                return
+
+        with ctx as stream:
+            for event in stream:
+                if event.type == "response.output_text.delta":
+                    yield event.delta
+            stream.close()
 
     return StreamingResponse(gen(), media_type="text/plain")
 
@@ -138,7 +174,7 @@ if CLIENT_DIR.exists():
     app.mount("/", StaticFiles(directory=str(CLIENT_DIR), html=True), name="client")
 
 # Notes (for maintainers):
-# • Adjusted to use OpenAI's chat.completions API for create and stream.
-# • Structured outputs use json_schema response_format with Pydantic model's JSON schema.
-# • Parsing and validation handled via Pydantic's model_validate_json.
+# • Uses OpenAI's Responses API for create, parse, and stream.
+# • Automatically falls back between max_output_tokens and max_completion_tokens.
+# • Structured outputs leverage responses.parse with the LesionReport Pydantic model.
 # • Streaming does not support structured outputs.
