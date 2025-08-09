@@ -1,4 +1,7 @@
-import os, json, pathlib
+import os
+import json
+import pathlib
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -71,31 +74,35 @@ def infer(
     def call():
         if req.json_schema:
             # Structured Outputs: enforce Pydantic schema
-            resp = client.responses.parse(
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "lesion_report",
+                    "strict": True,
+                    "schema": LesionReport.model_json_schema(),
+                },
+            }
+            resp = client.chat.completions.create(
                 model=model,
-                input=req.prompt,
+                messages=[{"role": "user", "content": req.prompt}],
                 temperature=temp,
-                max_output_tokens=max_tokens,
-                response_format=LesionReport,
-                timeout=SETTINGS.timeout_s
+                max_tokens=max_tokens,
+                timeout=SETTINGS.timeout_s,
+                response_format=response_format,
             )
-            # responses.parse returns parsed object(s) on .output_parsed
-            parsed = resp.output_parsed
-            if hasattr(parsed, "dict"):
-                data = parsed.dict()
-            else:
-                # Fallback if library returns native dict
-                data = parsed
+            content = resp.choices[0].message.content
+            parsed = LesionReport.model_validate_json(content)
+            data = parsed.model_dump()
             return JSONResponse({"ok": True, "data": data})
         else:
-            resp = client.responses.create(
+            resp = client.chat.completions.create(
                 model=model,
-                input=[{"role": "user", "content": req.prompt}],
+                messages=[{"role": "user", "content": req.prompt}],
                 temperature=temp,
-                max_output_tokens=max_tokens,
-                timeout=SETTINGS.timeout_s
+                max_tokens=max_tokens,
+                timeout=SETTINGS.timeout_s,
             )
-            text = resp.output_text
+            text = resp.choices[0].message.content
             return {"ok": True, "text": text}
 
     try:
@@ -112,23 +119,24 @@ def stream(req: InferenceReq):
 
     def gen():
         try:
-            with client.responses.stream(
+            response = client.chat.completions.create(
                 model=model,
-                input=[{"role": "user", "content": req.prompt}],
+                messages=[{"role": "user", "content": req.prompt}],
                 temperature=temp,
-                max_output_tokens=max_tokens,
-                timeout=SETTINGS.timeout_s
-            ) as stream:
-                for event in stream:
-                    if event.type == "response.output_text.delta":
-                        yield event.delta
-                stream.close()
+                max_tokens=max_tokens,
+                timeout=SETTINGS.timeout_s,
+                stream=True,
+            )
+            for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content is not None:
+                    yield chunk.choices[0].delta.content
         except Exception as e:
             yield f"\n\n[STREAM_ERROR] {e}"
 
     return StreamingResponse(gen(), media_type="text/plain")
 
 # Notes (for maintainers):
-# •responses.create/stream/parse aligns with the current OpenAI Responses API (unified surface with streaming + structured outputs).
-# •responses.parse(..., response_format=LesionReport) uses Pydantic to validate the model’s JSON—no brittle string parsing.
-# •Mint ephemeral tokens server-side only if you later add browser realtime.
+# • Adjusted to use OpenAI's chat.completions API for create and stream.
+# • Structured outputs use json_schema response_format with Pydantic model's JSON schema.
+# • Parsing and validation handled via Pydantic's model_validate_json.
+# • Streaming does not support structured outputs.
