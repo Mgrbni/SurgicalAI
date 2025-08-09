@@ -1,11 +1,10 @@
-#!/usr/bin/env bash
-set -e
-python -m pip install -U pip wheel
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-dev.txt
-export PYTHONPATH=.
-ruff check surgicalai_cli.py surgicalai tests
+@echo off
+setlocal
+python -m venv .venv
+call .venv\Scripts\activate
+pip install -U pip
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 pytest -q
-mkdir -p dist
-cp surgicalai_cli.py dist/SurgicalAI.exe
-sha256sum dist/SurgicalAI.exe
+pyinstaller surgicalai.spec --clean
+endlocal

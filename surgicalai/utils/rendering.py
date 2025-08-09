@@ -14,3 +14,16 @@ def red_colormap(values: np.ndarray) -> np.ndarray:
     colors = np.zeros((len(values), 3))
     colors[:, 0] = values
     return colors
+
+
+def get_offscreen_renderer(width: int, height: int):
+    """Return an Open3D offscreen renderer that works without a GUI."""
+    import open3d as o3d
+
+    setup_headless()
+    try:
+        renderer = o3d.visualization.rendering.OffscreenRenderer(width, height)
+    except Exception:  # pragma: no cover - fallback
+        os.environ["OPEN3D_CPU_RENDERING"] = "1"
+        renderer = o3d.visualization.rendering.OffscreenRenderer(width, height)
+    return renderer

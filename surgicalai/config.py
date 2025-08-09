@@ -29,11 +29,37 @@ class LLMConfig(BaseModel):
     redact_phi: bool = True
 
 
+class TrainConfig(BaseModel):
+    img_size: int = 256
+    batch_size: int = 32
+    num_workers: int = 4
+    max_epochs: int = 30
+    lr: float = 3e-4
+    weight_decay: float = 1e-4
+    early_stop_patience: int = 5
+    class_names: list[str] = ["benign", "melanoma"]
+
+
+class DataConfig(BaseModel):
+    source: str = "folder"
+    root: str = "data/lesions"
+    csv: str = "data/lesions/labels.csv"
+    db_dsn: str = "postgresql+psycopg2://user:pass@host/dbname"
+
+
+class ExportConfig(BaseModel):
+    to_onnx: bool = True
+    to_torchscript: bool = True
+
+
 class Config(BaseModel):
     analyze: AnalyzeConfig = AnalyzeConfig()
     plan: PlanConfig = PlanConfig()
     validate: ValidateConfig = ValidateConfig()
     llm: LLMConfig = LLMConfig()
+    train: TrainConfig = TrainConfig()
+    data: DataConfig = DataConfig()
+    export: ExportConfig = ExportConfig()
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -50,4 +76,7 @@ def load_config(path: Path | None = None) -> Config:
     model = os.getenv("OPENAI_MODEL")
     if model:
         cfg.llm.model = model
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        cfg.data.db_dsn = db_url
     return cfg

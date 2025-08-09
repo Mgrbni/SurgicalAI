@@ -16,4 +16,5 @@ artifacts.
 
 Troubleshooting: ensure that `torch` and `torchvision` wheels are available for
 the target platform. If PyInstaller reports missing DLLs, add `--collect-all`
-for the offending package in `surgicalai.spec`.
+for the offending package in `surgicalai.spec` or extend the `hiddenimports`
+list. Open3D often requires `--collect-all open3d`.

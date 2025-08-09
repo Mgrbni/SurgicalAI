@@ -15,5 +15,11 @@ fastapi
 uvicorn
 matplotlib
 reportlab
-openai
 python-dotenv
+sqlalchemy
+psycopg2-binary
+pandas
+scikit-learn
+onnx
+onnxruntime
+openai
