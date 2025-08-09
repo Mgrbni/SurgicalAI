@@ -1,22 +1,13 @@
-torch
-torchvision
-timm
-opencv-python
 numpy
 scipy
-scikit-image
 pillow
 matplotlib
-shapely
-pydantic
-fastapi
-uvicorn
-gradio
-open3d
+opencv-python
 trimesh
-networkx
-scikit-learn
-structlog
+shapely
+scikit-image
 rich
+pydantic
 pyyaml
-reportlab
+torch; platform_system == "Windows"
+torchvision; platform_system == "Windows"
