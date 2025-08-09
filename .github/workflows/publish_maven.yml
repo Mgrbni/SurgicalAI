@@ -1,0 +1,60 @@
+name: publish-maven
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: read
+  packages: write
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set OWNER/REPO env
+        run: |
+          echo "OWNER=${GITHUB_REPOSITORY_OWNER}" >> $GITHUB_ENV
+          echo "REPO=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          server-id: github
+          settings-path: ${{ github.workspace }}
+
+      - name: Export OpenAPI
+        run: python scripts/export_openapi.py
+      - name: Install OpenAPI Generator
+        uses: openapi-generators/openapi-generator-action@v1
+        with:
+          generator: java
+          openapi-file: ./docs/openapi.json
+          config-file: ./clients/java/openapi-config.yaml
+          command-args: -o clients/java
+
+      - name: Write settings.xml for GitHub Packages
+        run: |
+          cat > settings.xml <<'XML'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+            </servers>
+          </settings>
+          XML
+
+      - name: Replace OWNER/REPO in pom.xml
+        run: |
+          sed -i "s#OWNER#${OWNER}#g" clients/java/pom.xml
+          sed -i "s#REPO#${REPO}#g" clients/java/pom.xml
+
+      - name: Build & Deploy
+        working-directory: clients/java
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mvn -s $GITHUB_WORKSPACE/settings.xml -B -DskipTests deploy

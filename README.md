@@ -78,3 +78,42 @@ See [docs/IO_SCHEMA.md](docs/IO_SCHEMA.md) for data contracts.
 ## License
 
 Apache-2.0
+
+## GitHub Packages
+
+### Docker (GHCR)
+Pull:
+
+docker pull ghcr.io/openai/surgicalai:latest
+
+### Java (Maven)
+In `settings.xml`:
+```xml
+<server><id>github</id><username>YOUR_GH_USER</username><password>YOUR_PAT_with_read:packages</password></server>
+```
+In pom.xml:
+```
+<repositories><repository><id>github</id><url>https://maven.pkg.github.com/openai/SurgicalAI</url></repository></repositories>
+<dependency><groupId>io.github.openai</groupId><artifactId>surgicalai-client</artifactId><version>1.0.0</version></dependency>
+```
+### .NET (NuGet)
+
+Create NuGet.config:
+```
+<configuration>
+  <packageSources>
+    <add key="github" value="https://nuget.pkg.github.com/openai/index.json" />
+  </packageSources>
+  <packageSourceCredentials>
+    <github>
+      <add key="Username" value="YOUR_GH_USER" />
+      <add key="ClearTextPassword" value="YOUR_PAT_with_read:packages" />
+    </github>
+  </packageSourceCredentials>
+</configuration>
+```
+
+Install:
+```
+dotnet add package SurgicalAI.Client --version 1.0.0
+```
