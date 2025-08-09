@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-packages = ['matplotlib']
+packages = ['matplotlib', 'open3d', 'torch', 'torchvision']
 datas, binaries, hiddenimports = [], [], []
 for pkg in packages:
     d, b, h = collect_all(pkg)
@@ -10,14 +10,14 @@ for pkg in packages:
     hiddenimports += h
 
 a = Analysis(
-    ['surgicalai_cli.py'],
+    ['surgicalai/cli.py'],
     pathex=[],
     binaries=binaries,
     datas=datas + [('surgicalai/assets', 'surgicalai/assets')],
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=['surgicalai/_pyinstaller_mpl.py'],
-    excludes=['tests', 'torch', 'torchvision'],
+    excludes=['tests'],
     noarchive=False,
 )
 

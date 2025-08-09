@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from pydantic import BaseModel
 import yaml
@@ -39,5 +40,14 @@ def load_config(path: Path | None = None) -> Config:
     path = path or Path(__file__).with_name("config.yaml")
     if path.exists():
         data = yaml.safe_load(path.read_text()) or {}
-        return Config(**data)
-    return Config()
+        cfg = Config(**data)
+    else:
+        cfg = Config()
+
+    # environment overrides
+    if os.getenv("LLM_ENABLED") is not None:
+        cfg.llm.enabled = os.getenv("LLM_ENABLED", "").lower() == "true"
+    model = os.getenv("OPENAI_MODEL")
+    if model:
+        cfg.llm.model = model
+    return cfg

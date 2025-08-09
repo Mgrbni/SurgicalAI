@@ -16,3 +16,4 @@ uvicorn
 matplotlib
 reportlab
 openai
+python-dotenv
