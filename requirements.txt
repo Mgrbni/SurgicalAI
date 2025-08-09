@@ -5,12 +5,12 @@ trimesh
 torch
 torchvision
 pillow
-opencv-python
+opencv-python-headless
 scikit-image
 pydantic
 typer
 rich
-pytorch-grad-cam
+grad-cam
 fastapi
 uvicorn
 matplotlib
