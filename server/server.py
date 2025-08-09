@@ -43,8 +43,26 @@ class InferenceReq(BaseModel):
 def healthz():
     return {"ok": True, "model": SETTINGS.model}
 
-@app.post("/api/infer")  # non-stream simple text or structured JSON
-def infer(req: InferenceReq):
+@app.api_route("/api/infer", methods=["GET", "POST"])  # non-stream simple text or structured JSON
+def infer(
+    req: InferenceReq | None = None,
+    prompt: str | None = None,
+    model: str | None = None,
+    temperature: float | None = None,
+    max_output_tokens: int | None = None,
+    json_schema: bool = False,
+):
+    if req is None:
+        if prompt is None:
+            raise HTTPException(status_code=400, detail="prompt is required")
+        req = InferenceReq(
+            prompt=prompt,
+            model=model,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            json_schema=json_schema,
+        )
+
     model = req.model or SETTINGS.model
     temp = SETTINGS.temperature if req.temperature is None else req.temperature
     max_tokens = min(req.max_output_tokens or SETTINGS.max_output_tokens,
