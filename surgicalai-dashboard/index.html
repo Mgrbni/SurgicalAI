@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  />
+  <title>SurgicalAI • Dr. Mehdi Ghorbani Karimabad</title>
+  <meta name="description" content="SurgicalAI Dashboard for Polycam-based analysis, lesion detection, and flap planning." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Ctext y='50%25' x='50%25' text-anchor='middle' dominant-baseline='middle' font-size='160'%3E%F0%9F%8F%A0%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" aria-label="Primary">
+      <div class="brand">
+        <div class="brand-mark">SAI</div>
+        <div class="brand-text">
+          <div class="brand-title">SurgicalAI</div>
+          <div class="brand-sub">Dr. Mehdi Ghorbani Karimabad</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-section="dashboard">
+          <span class="icon">🏠</span>Dashboard
+        </button>
+        <button class="nav-item" data-section="analysis">
+          <span class="icon">🧠</span>Analysis
+        </button>
+        <button class="nav-item" data-section="reports">
+          <span class="icon">📊</span>Reports
+        </button>
+        <button class="nav-item" data-section="settings">
+          <span class="icon">⚙️</span>Settings
+        </button>
+        <button class="nav-item" data-section="help">
+          <span class="icon">❓</span>Help
+        </button>
+        <button class="nav-item" data-section="contact">
+          <span class="icon">📨</span>Contact
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-outline" id="btn-about">About / Signature</button>
+        <div class="watermark">© Dr. Mehdi Ghorbani Karimabad</div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="search">
+          <input id="search" type="text" placeholder="Search patients, scans, reports…" aria-label="Search" />
+        </div>
+        <div class="top-actions">
+          <button class="btn" id="btn-new-case">+ New Case</button>
+          <div class="user-chip" title="Signed in">
+            <div class="avatar">MG</div>
+            <div class="user-meta">
+              <div class="user-name">Dr. Mehdi Ghorbani Karimabad</div>
+              <div class="user-role">Plastic, Reconstructive & Aesthetic Surgery</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Sections -->
+      <section class="section visible" id="dashboard">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-head">
+              <h3>Quick Upload (Polycam)</h3>
+            </div>
+            <div class="uploader" id="dropzone" tabindex="0" role="button" aria-label="Upload 3D scan">
+              <div class="uploader-inner">
+                <div class="big-icon">⬆️</div>
+                <p>Drag & drop .obj/.glb, or click to select</p>
+                <input id="file-input" type="file" accept=".obj,.glb,.ply,.stl" hidden />
+                <button class="btn btn-outline" id="btn-browse">Browse Files</button>
+              </div>
+            </div>
+            <div class="muted tiny">HIPAA/Privacy: Local preview only until you connect your backend.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Recent Cases</h3>
+              <button class="btn btn-ghost" id="btn-refresh-cases">↻</button>
+            </div>
+            <ul class="list" id="recent-cases">
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>System Status</h3>
+            </div>
+            <ul class="kpis">
+              <li><span>GPU</span><strong id="kpi-gpu">Idle</strong></li>
+              <li><span>Queue</span><strong id="kpi-queue">0</strong></li>
+              <li><span>Models</span><strong id="kpi-models">ResNet‑50 • Grad‑CAM</strong></li>
+              <li><span>Signature</span><strong>Active</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card full">
+          <div class="card-head">
+            <h3>Live 3D Preview & Pipeline</h3>
+            <div class="actions">
+              <button class="btn btn-ghost" id="btn-center">Center</button>
+              <button class="btn btn-ghost" id="btn-reset">Reset</button>
+            </div>
+          </div>
+          <div class="preview">
+            <canvas id="viewport" aria-label="3D viewport"></canvas>
+            <div class="pipeline">
+              <div class="pipe-step done">Parse Mesh</div>
+              <div class="pipe-step">Landmarks</div>
+              <div class="pipe-step">Lesion Detect</div>
+              <div class="pipe-step">Grad‑CAM</div>
+              <div class="pipe-step">Flap Planner</div>
+              <div class="pipe-step">Report</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="analysis">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h3>Lesion Probability</h3>
+            </div>
+            <div class="probabilities" id="probs">
+              <!-- Bars populated by JS -->
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Grad‑CAM Heatmap</h3>
+              <div class="actions">
+                <label class="toggle">
+                  <input type="checkbox" id="toggle-heat" checked />
+                  <span>Show</span>
+                </label>
+              </div>
+            </div>
+            <div class="heatmap">
+              <canvas id="heatmap-canvas"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Rotational Flap Designer</h3>
+            </div>
+            <div class="flap-config">
+              <label>
+                Langer’s Line Angle
+                <input type="range" min="0" max="180" value="35" id="langer-angle">
+              </label>
+              <label>
+                Rotation Arc (°)
+                <input type="range" min="30" max="180" value="90" id="arc">
+              </label>
+              <label>
+                Predicted Success (%)
+                <input type="number" value="89" id="success">
+              </label>
+              <button class="btn" id="btn-plan">Generate Plan</button>
+            </div>
+            <div class="plan-view" id="plan-view">
+              <!-- SVG plan injected by JS -->
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Biomechanical Checks</h3>
+            </div>
+            <ul class="checks" id="checks">
+              <!-- Filled by JS -->
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="reports">
+        <div class="card">
+          <div class="card-head">
+            <h3>Reports</h3>
+            <div class="actions">
+              <button class="btn btn-outline" id="btn-export-pdf">Export PDF</button>
+              <button class="btn btn-outline" id="btn-export-json">Export JSON</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="reports-table" aria-label="Reports table">
+              <thead>
+                <tr>
+                  <th>Case</th>
+                  <th>Date</th>
+                  <th>Primary Dx</th>
+                  <th>Lesion P(%)</th>
+                  <th>Flap</th>
+                  <th>Status</th>
+                  <th>Open</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Rows by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="settings">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>API & Models</h3></div>
+            <div class="form">
+              <label>OpenAI API Key <input type="password" id="openai-key" placeholder="sk-..." /></label>
+              <label>Model
+                <select id="model-select">
+                  <option value="gpt-5-thinking">GPT‑5 Thinking</option>
+                  <option value="gpt-4o">GPT‑4o</option>
+                </select>
+              </label>
+              <label>Lesion Backbone
+                <select id="backbone">
+                  <option>ResNet‑50</option>
+                  <option>EfficientNet‑B3</option>
+                  <option>ConvNeXt‑T</option>
+                </select>
+              </label>
+              <button class="btn" id="btn-save-settings">Save Settings</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Privacy & Security</h3></div>
+            <div class="form">
+              <label class="toggle">
+                <input type="checkbox" id="toggle-local" checked />
+                <span>Local processing by default</span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" id="toggle-anon" checked />
+                <span>Auto‑anonymize identifiers</span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" id="toggle-audit" checked />
+                <span>Write audit trail</span>
+              </label>
+              <button class="btn btn-outline" id="btn-export-audit">Export Audit Log</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Branding</h3></div>
+            <div class="form">
+              <label>Clinic/Signature Line
+                <input type="text" id="signature" value="Dr. Mehdi Ghorbani Karimabad — Plastic, Reconstructive & Aesthetic Surgery" />
+              </label>
+              <label>Watermark Toggle
+                <select id="wm-toggle">
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+              </label>
+              <button class="btn" id="btn-apply-brand">Apply</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Build Integration</h3></div>
+            <div class="form">
+              <p class="muted">
+                For desktop builds (e.g., PyInstaller), embed your signature in the version metadata.
+              </p>
+              <pre class="code small" aria-label="Version file example">
+# file_version.txt (PyInstaller --version-file)
+CompanyName=Dr. Mehdi Ghorbani Karimabad Clinic
+FileDescription=SurgicalAI Dashboard
+FileVersion=1.0.0.0
+InternalName=SurgicalAI
+OriginalFilename=SurgicalAI.exe
+ProductName=SurgicalAI
+ProductVersion=1.0.0.0
+LegalCopyright=© Dr. Mehdi Ghorbani Karimabad
+              </pre>
+              <button class="btn btn-outline" id="btn-copy-version">Copy Version File</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="help">
+        <div class="card">
+          <div class="card-head"><h3>Quick Start</h3></div>
+          <ol class="qs">
+            <li>Upload a Polycam scan (.obj/.glb).</li>
+            <li>Run analysis to get lesion probabilities + Grad‑CAM.</li>
+            <li>Open Flap Designer, adjust Langer’s angle & arc, export plan.</li>
+            <li>Generate PDF report, signed with your clinic line.</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Shortcuts</h3></div>
+          <ul class="list">
+            <li><kbd>U</kbd> — Upload scan</li>
+            <li><kbd>G</kbd> — Toggle heatmap</li>
+            <li><kbd>P</kbd> — Generate flap plan</li>
+            <li><kbd>/</kbd> — Focus search</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" id="contact">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Send a Message</h3></div>
+            <div class="form">
+              <label>Name <input type="text" id="c-name" placeholder="Your name" /></label>
+              <label>Email <input type="email" id="c-email" placeholder="name@example.com" /></label>
+              <label>Message <textarea id="c-msg" rows="6" placeholder="How can we help?"></textarea></label>
+              <button class="btn" id="btn-send">Send</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Clinic</h3></div>
+            <div class="clinic">
+              <div class="clinic-name">Dr. Mehdi Ghorbani Karimabad</div>
+              <div class="clinic-role">Plastic, Reconstructive & Aesthetic Surgery</div>
+              <div class="clinic-meta">Istanbul • Ankara • Global</div>
+              <div class="clinic-meta">Email: contact@surgicalai.local</div>
+              <div class="clinic-meta">© All rights reserved</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="footer-left">
+          SurgicalAI • © <span id="year"></span> • <span id="sigline">Dr. Mehdi Ghorbani Karimabad — Plastic, Reconstructive & Aesthetic Surgery</span>
+        </div>
+        <div class="footer-right">v1.0 • Signed</div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- About Modal -->
+  <dialog id="about">
+    <div class="modal">
+      <h3>About / Signature</h3>
+      <p>
+        SurgicalAI Dashboard<br/>
+        <strong>Signed:</strong> Dr. Mehdi Ghorbani Karimabad — Plastic, Reconstructive & Aesthetic Surgery
+      </p>
+      <p class="muted tiny">All builds and exports carry this signature by default.</p>
+      <div class="modal-actions">
+        <button class="btn" id="btn-close-about">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
