@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 import sys
 
-from surgicalai.demo import run
 
 
 def main() -> int:
     out = Path("outputs/selfcheck")
-    run(out)
+    subprocess.run(["surgicalai", "demo", "--out", str(out)], check=True)
     required = [
         "mesh.npz",
         "heatmap_vertex.npy",
@@ -23,6 +23,11 @@ def main() -> int:
         p = out / name
         if not p.exists() or p.stat().st_size == 0:
             return 1
+    model_path = Path("models/resnet50_best.pt")
+    if model_path.exists():
+        import torch
+
+        torch.load(model_path, map_location="cpu")
     if (out / "narrative.json").exists() and (out / "narrative.json").stat().st_size == 0:
         return 1
     return 0

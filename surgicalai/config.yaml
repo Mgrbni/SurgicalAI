@@ -13,3 +13,22 @@ llm:
   temperature: 0.2
   timeout_s: 30
   redact_phi: true
+train:
+  img_size: 256
+  batch_size: 32
+  num_workers: 4
+  max_epochs: 30
+  lr: 0.0003
+  weight_decay: 0.0001
+  early_stop_patience: 5
+  class_names:
+    - benign
+    - melanoma
+data:
+  source: folder
+  root: data/lesions
+  csv: data/lesions/labels.csv
+  db_dsn: postgresql+psycopg2://user:pass@host/dbname
+export:
+  to_onnx: true
+  to_torchscript: true

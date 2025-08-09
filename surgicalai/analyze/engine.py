@@ -6,6 +6,8 @@ from typing import Dict
 import numpy as np
 from PIL import Image, ImageDraw
 
+import torch
+
 from surgicalai.config import Config
 from surgicalai.logging_utils import get_logger
 from surgicalai.utils.io import load_npz, write_json
@@ -13,7 +15,26 @@ from surgicalai.utils.io import load_npz, write_json
 LOGGER = get_logger(__name__)
 
 
+def _load_classifier() -> str:
+    """Return string describing which model was loaded."""
+    models_dir = Path("models")
+    if (models_dir / "resnet50_traced.pt").exists():
+        torch.jit.load(models_dir / "resnet50_traced.pt", map_location="cpu")
+        return "torchscript"
+    if (models_dir / "resnet50.onnx").exists():
+        import onnxruntime as ort
+
+        ort.InferenceSession(str(models_dir / "resnet50.onnx"))
+        return "onnx"
+    if (models_dir / "resnet50_best.pt").exists():
+        torch.load(models_dir / "resnet50_best.pt", map_location="cpu")
+        return "state_dict"
+    return "imagenet"
+
+
 def run(case_dir: Path, config: Config) -> Dict[str, float]:
+    model_used = _load_classifier()
+    LOGGER.info("classifier: %s", model_used)
     mesh = load_npz(case_dir / "mesh.npz")
     verts = mesh["vertices"]
     n = len(verts)
