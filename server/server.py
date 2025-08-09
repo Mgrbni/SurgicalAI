@@ -1,16 +1,19 @@
 import os
-import json
 import pathlib
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from openai import OpenAI
-from .settings import SETTINGS
-from .schemas import LesionReport
-from .rate_limit import retry_policy
+from server.settings import SETTINGS
+from server.schemas import LesionReport
+from server.rate_limit import retry_policy
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env")
 
 # Validate key early
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -28,12 +31,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Serve the static client from ./client
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-CLIENT_DIR = ROOT / "client"
-if CLIENT_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(CLIENT_DIR), html=True), name="client")
 
 class InferenceReq(BaseModel):
     prompt: str
@@ -134,6 +131,11 @@ def stream(req: InferenceReq):
             yield f"\n\n[STREAM_ERROR] {e}"
 
     return StreamingResponse(gen(), media_type="text/plain")
+
+# Serve the static client from ./client
+CLIENT_DIR = ROOT / "client"
+if CLIENT_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(CLIENT_DIR), html=True), name="client")
 
 # Notes (for maintainers):
 # • Adjusted to use OpenAI's chat.completions API for create and stream.
