@@ -1,37 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+"""Minimal FastAPI app for SurgicalAI."""
+
 from __future__ import annotations
 
-from pathlib import Path
+# SPDX-License-Identifier: Apache-2.0
+
 from fastapi import FastAPI
-from surgicalai.demo import run as demo_run
 
 app = FastAPI(title="SurgicalAI")
 
 
-@app.post("/demo")
-async def demo_endpoint(with_llm: bool = False) -> dict:
-    out = Path("api_demo")
-    demo_run(out, with_llm=with_llm)
-    return {"out": str(out)}
-
-
-@app.get("/analyze")
-async def analyze_endpoint():  # pragma: no cover - placeholder
+@app.get("/ping")
+def ping() -> dict[str, str]:
+    """Health check."""
     return {"status": "ok"}
 
 
-@app.get("/plan")
-async def plan_endpoint():  # pragma: no cover
-    return {"status": "ok"}
-
-
-@app.get("/validate")
-async def validate_endpoint():  # pragma: no cover
-    return {"status": "ok"}
-
-
-@app.get("/visualize")
-async def visualize_endpoint():  # pragma: no cover
-    return {"status": "ok"}
+@app.post("/predict")
+def predict() -> dict[str, float]:
+    """Return stub prediction on synthetic data."""
+    return {"lesion_prob": 0.5}
 
 
 if __name__ == "__main__":  # pragma: no cover

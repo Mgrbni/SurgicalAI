@@ -5,7 +5,6 @@ import subprocess
 import sys
 
 
-
 def main() -> int:
     out = Path("outputs/selfcheck")
     subprocess.run(["surgicalai", "demo", "--out", str(out)], check=True)
@@ -28,7 +27,9 @@ def main() -> int:
         import torch
 
         torch.load(model_path, map_location="cpu")
-    if (out / "narrative.json").exists() and (out / "narrative.json").stat().st_size == 0:
+    if (out / "narrative.json").exists() and (
+        out / "narrative.json"
+    ).stat().st_size == 0:
         return 1
     return 0
 

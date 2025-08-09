@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 """Synthetic rotational flap designer."""
+
 from __future__ import annotations
 
 from typing import Dict, Any

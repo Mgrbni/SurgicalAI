@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,7 +27,9 @@ def _build_model(num_classes: int) -> nn.Module:
     return model
 
 
-def _metrics(y_true: List[int], y_pred: List[int], probs: List[float]) -> Dict[str, float]:
+def _metrics(
+    y_true: List[int], y_pred: List[int], probs: List[float]
+) -> Dict[str, float]:
     acc = accuracy_score(y_true, y_pred)
     try:
         auroc = roc_auc_score(y_true, probs)
@@ -35,7 +38,13 @@ def _metrics(y_true: List[int], y_pred: List[int], probs: List[float]) -> Dict[s
     f1 = f1_score(y_true, y_pred, average="macro")
     sens = recall_score(y_true, y_pred, average="macro")
     spec = precision_score(y_true, y_pred, average="macro")
-    return {"accuracy": acc, "auroc": auroc, "f1": f1, "sensitivity": sens, "specificity": spec}
+    return {
+        "accuracy": acc,
+        "auroc": auroc,
+        "f1": f1,
+        "sensitivity": sens,
+        "specificity": spec,
+    }
 
 
 def train(config: Config | None = None) -> Path:
@@ -43,7 +52,9 @@ def train(config: Config | None = None) -> Path:
     train_loader, val_loader, _ = create_dataloaders(cfg.train, cfg.data)
     device = torch.device("cpu")
     model = _build_model(len(cfg.train.class_names)).to(device)
-    opt = torch.optim.Adam(model.parameters(), lr=cfg.train.lr, weight_decay=cfg.train.weight_decay)
+    opt = torch.optim.Adam(
+        model.parameters(), lr=cfg.train.lr, weight_decay=cfg.train.weight_decay
+    )
     criterion = nn.CrossEntropyLoss()
 
     best_acc = 0.0
@@ -93,18 +104,24 @@ def train(config: Config | None = None) -> Path:
         traced = torch.jit.trace(model.cpu(), dummy)
         traced.save(model_dir / "resnet50_traced.pt")
     if cfg.export.to_onnx:
-        torch.onnx.export(model.cpu(), dummy, model_dir / "resnet50.onnx", opset_version=12)
+        torch.onnx.export(
+            model.cpu(), dummy, model_dir / "resnet50.onnx", opset_version=12
+        )
 
     # metrics
     write_json(out_dir / "metrics.json", {"accuracy": history["accuracy"]})
-    cm = confusion_matrix(y_true, y_pred, labels=list(range(len(cfg.train.class_names))))
+    cm = confusion_matrix(
+        y_true, y_pred, labels=list(range(len(cfg.train.class_names)))
+    )
     write_json(out_dir / "confusion_matrix.json", cm.tolist())
 
     # misclassified examples
     rows = ["path,label,pred,prob,fold,epoch"]
     for (path, lbl), pred, prob in zip(val_loader.dataset.items, y_pred, probs):  # type: ignore[attr-defined]
         if pred != lbl or prob < 0.6:
-            rows.append(f"{path},{lbl},{pred},{prob:.4f},val,{len(history['accuracy'])}")
+            rows.append(
+                f"{path},{lbl},{pred},{prob:.4f},val,{len(history['accuracy'])}"
+            )
     (out_dir / "misclassified.csv").write_text("\n".join(rows))
 
     return model_dir / "resnet50_best.pt"

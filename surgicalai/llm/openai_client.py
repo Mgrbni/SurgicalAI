@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import json
@@ -22,16 +23,13 @@ except Exception:  # pragma: no cover
 
 PHI_KEYS = {"name", "date", "mrn", "gps_exif", "notes"}
 
+
 def redact_phi(data: Dict[str, Any]) -> Dict[str, Any]:
     """Recursively remove PHI fields from a JSON-like structure."""
 
     def _clean(obj: Any) -> Any:
         if isinstance(obj, dict):
-            return {
-                k: _clean(v)
-                for k, v in obj.items()
-                if k not in PHI_KEYS
-            }
+            return {k: _clean(v) for k, v in obj.items() if k not in PHI_KEYS}
         if isinstance(obj, list):
             return [_clean(v) for v in obj]
         return obj
@@ -56,9 +54,7 @@ class OpenAIClient:
 
     def _estimate_cost(self, usage: Dict[str, int]) -> float:
         pricing = {"gpt-4o": (0.005, 0.015)}  # per 1K tokens (prompt, completion)
-        prompt_cost, completion_cost = pricing.get(
-            self.config.model, (0.0, 0.0)
-        )
+        prompt_cost, completion_cost = pricing.get(self.config.model, (0.0, 0.0))
         return (
             usage.get("prompt_tokens", 0) / 1000 * prompt_cost
             + usage.get("completion_tokens", 0) / 1000 * completion_cost
@@ -112,7 +108,7 @@ class OpenAIClient:
                 return result, usage
             except Exception as exc:  # pragma: no cover - transient API errors
                 LOGGER.error("LLM error: %s", exc)
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
         return self._fallback(schema), None
 
     # ---- public API --------------------------------------------------------
@@ -127,9 +123,7 @@ class OpenAIClient:
 
         from surgicalai.schemas import Narrative
 
-        result, usage = self.chat_json(
-            "surgical narrative", user, Narrative
-        )
+        result, usage = self.chat_json("surgical narrative", user, Narrative)
         if usage:
             self._log_usage(case_dir, usage)
         return result.dict()

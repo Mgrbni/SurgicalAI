@@ -1,21 +1,18 @@
-.PHONY: demo demo-llm test api ui clean
+.PHONY: demo setup clean sample
+VENV?=.venv
+PY=$(VENV)/bin/python
 
-demo:
-pip install -e .
-surgicalai demo --out outputs/demo
+setup:
+	python -m venv $(VENV)
+	$(PY) -m pip install --upgrade pip
+	$(PY) -m pip install -e ".[demo]"
 
-demo-llm:
-pip install -e .
-surgicalai demo --out outputs/demo --with-llm
+sample:
+	$(PY) -m surgicalai.tools.make_sample --out data/lesions_sample --n 8 --seed 1337
 
-test:
-pytest -q
-
-api:
-python -m surgicalai.api
-
-ui:
-python -m surgicalai.ui
+demo: setup sample
+	$(PY) -m surgicalai.demo --input data/lesions_sample --cpu --offline-llm --out runs/demo
+	python -c "import webbrowser, pathlib as p; webbrowser.open(p.Path(runs/demo).resolve().as_uri())"
 
 clean:
-rm -rf outputs
+	rm -rf $(VENV) runs/demo data/lesions_sample

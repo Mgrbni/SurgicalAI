@@ -1,57 +1,20 @@
-name: CI
-
+name: ci
 on: [push, pull_request]
-
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11']
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip setuptools wheel
-      - run: python -m pip install -r requirements-dev.txt
-      - run: python -m pip install -e .
-      - name: Run tests with coverage
-        run: |
-          python -m pytest -q \
-            --cov=surgicalai \
-            --cov-report=term-missing \
-            --cov-report=xml:coverage.xml \
-            --cov-report=html:htmlcov \
-            --cov-fail-under=80
-      - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: |
-            coverage.xml
-            htmlcov
-      - name: Post coverage to job summary
-        run: |
-          python - <<'PY'
-import xml.etree.ElementTree as ET
-r = ET.parse("coverage.xml").getroot().attrib.get("line-rate", "0")
-pct = float(r) * 100
-print(f"Total coverage: {pct:.2f}%")
-open("/tmp/summary.md","w").write(f"## Coverage\n\n**Total:** {pct:.2f}%\n\nSee artifact `coverage-reports` for HTML details.")
-PY
-          cat /tmp/summary.md >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage.xml
-          fail_ci_if_error: true
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev,demo]"
+      - run: ruff check .
+      - run: black --check .
+      - run: mypy surgicalai
+      - run: pytest -q
+      - run: make demo
       - uses: actions/upload-artifact@v4
         with:
-          name: demo-output
-          path: outputs/demo
+          name: demo-outputs
+          path: runs/demo/**

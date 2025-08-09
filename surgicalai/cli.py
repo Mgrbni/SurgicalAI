@@ -1,95 +1,67 @@
+# SPDX-License-Identifier: Apache-2.0
+"""SurgicalAI command line interface."""
+
 from __future__ import annotations
 
-from pathlib import Path
-import subprocess
+# SPDX-License-Identifier: Apache-2.0
 
+import os
+from pathlib import Path
 import typer
 
-from surgicalai.demo import run as demo_run
+from surgicalai import demo as demo_mod
 from surgicalai.training import train as train_mod
 from surgicalai.training import evaluate as eval_mod
-from surgicalai.training import retrain as retrain_mod
-from surgicalai.datastore import db as db_mod
-from surgicalai.config import load_config
 
-app = typer.Typer(help="SurgicalAI research prototype")
-dataset_app = typer.Typer(help="Dataset utilities")
-app.add_typer(dataset_app, name="dataset")
-
-
-@app.callback()
-def root() -> None:
-    """SurgicalAI command line."""
+app = typer.Typer(help="SurgicalAI utilities")
 
 
 @app.command()
 def demo(
-    out: Path = typer.Option(..., "--out", help="Output directory"),
-    with_llm: bool = typer.Option(False, help="Use LLM"),
-    model: str | None = None,
+    input: Path = typer.Option(..., "--input", help="Input sample directory"),
+    out: Path = typer.Option(Path("runs/demo"), "--out", help="Output directory"),
+    cpu: bool = typer.Option(True, "--cpu", help="Force CPU mode"),
+    offline_llm: bool = typer.Option(
+        True, "--offline-llm", help="Disable network calls"
+    ),
 ) -> None:
-    demo_run(out, with_llm=with_llm, model=model)
-
-
-@dataset_app.command("sync")
-def dataset_sync(
-    dsn: str = typer.Option("", help="Database DSN"),
-    root: Path | None = typer.Option(None, help="Dataset root"),
-    csv: Path | None = typer.Option(None, help="CSV manifest"),
-) -> None:
-    if not dsn:
-        typer.echo("DSN required")
-        raise typer.Exit(code=1)
-    db_mod.sync_from_folder_or_csv(dsn, str(root) if root else None, str(csv) if csv else None)
+    """Run demo pipeline."""
+    if cpu:
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    if offline_llm:
+        os.environ["SURGICALAI_OFFLINE_LLM"] = "1"
+    demo_mod.run(out, input_dir=input, with_llm=not offline_llm)
 
 
 @app.command()
-def train(
-    data_source: str = typer.Option("folder"),
-    root: Path = typer.Option(Path("data/lesions")),
-    csv: Path = typer.Option(Path("data/lesions/labels.csv")),
-    dsn: str = typer.Option(""),
-    epochs: int = typer.Option(None),
-    lr: float = typer.Option(None),
-) -> None:
-    cfg = load_config()
-    cfg.data.source = data_source
-    cfg.data.root = str(root)
-    cfg.data.csv = str(csv)
-    if dsn:
-        cfg.data.db_dsn = dsn
-    if epochs:
-        cfg.train.max_epochs = epochs
-    if lr:
-        cfg.train.lr = lr
-    train_mod.train(cfg)
+def train(data: Path = typer.Option(Path("data/lesions_sample"), "--data")) -> None:
+    """Train toy model on synthetic data."""
+    train_mod.train(data)
 
 
 @app.command()
-def evaluate(
-    checkpoint: Path = typer.Option(Path("models/resnet50_best.pt")),
-    csv_out: Path | None = typer.Option(None),
-) -> None:
-    eval_mod.evaluate(checkpoint, csv_out=csv_out)
+def evaluate(checkpoint: Path = typer.Option(Path("toy.pt"), "--checkpoint")) -> None:
+    """Evaluate toy model."""
+    eval_mod.evaluate(checkpoint)
 
 
 @app.command()
-def retrain(
-    from_csv: Path = typer.Option(..., help="misclassified CSV"),
-    epochs: int = typer.Option(3),
-) -> None:
-    retrain_mod.retrain(from_csv, epochs)
+def api(host: str = "0.0.0.0", port: int = 8000) -> None:
+    """Run FastAPI server."""
+    os.environ.setdefault("SURGICALAI_OFFLINE_LLM", "1")
+    import uvicorn
+
+    uvicorn.run("surgicalai.api:app", host=host, port=port)
 
 
 @app.command()
-def package() -> None:
-    """Build Windows executable via PyInstaller."""
-    subprocess.run(["pyinstaller", "surgicalai.spec", "--clean"], check=True)
+def ui() -> None:
+    """Launch Gradio UI."""
+    os.environ.setdefault("SURGICALAI_OFFLINE_LLM", "1")
+    from surgicalai import ui as ui_mod
 
-
-def main() -> None:  # pragma: no cover
-    app()
+    ui_mod.launch()
 
 
 if __name__ == "__main__":  # pragma: no cover
-    main()
+    app()
