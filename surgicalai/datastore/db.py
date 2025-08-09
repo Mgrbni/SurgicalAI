@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 from pathlib import Path
@@ -51,7 +52,9 @@ def init_db(dsn: str) -> None:
     Base.metadata.create_all(engine)
 
 
-def sync_from_folder_or_csv(dsn: str, root: str | None = None, csv: str | None = None) -> None:
+def sync_from_folder_or_csv(
+    dsn: str, root: str | None = None, csv: str | None = None
+) -> None:
     engine = get_engine(dsn)
     Base.metadata.create_all(engine)
     with Session(engine) as sess:
@@ -61,13 +64,25 @@ def sync_from_folder_or_csv(dsn: str, root: str | None = None, csv: str | None =
                     continue
                 label = cls_dir.name
                 for img in cls_dir.glob("*.jpg"):
-                    if not sess.execute(select(Image).filter_by(uri_or_path=str(img))).scalar_one_or_none():
-                        sess.add(Image(uri_or_path=str(img), label=label, split="train"))
+                    if not sess.execute(
+                        select(Image).filter_by(uri_or_path=str(img))
+                    ).scalar_one_or_none():
+                        sess.add(
+                            Image(uri_or_path=str(img), label=label, split="train")
+                        )
         if csv:
             df = pd.read_csv(csv)
             for _, row in df.iterrows():
-                if not sess.execute(select(Image).filter_by(uri_or_path=row["path"])).scalar_one_or_none():
-                    sess.add(Image(uri_or_path=row["path"], label=row["label"], split=row.get("split", "train")))
+                if not sess.execute(
+                    select(Image).filter_by(uri_or_path=row["path"])
+                ).scalar_one_or_none():
+                    sess.add(
+                        Image(
+                            uri_or_path=row["path"],
+                            label=row["label"],
+                            split=row.get("split", "train"),
+                        )
+                    )
         sess.commit()
 
 
@@ -83,6 +98,6 @@ def pull_verified_labels(dsn: str) -> pd.DataFrame:
     engine = get_engine(dsn)
     with Session(engine) as sess:
         rows = sess.execute(select(Image).filter_by(verified=True)).scalars().all()
-    return pd.DataFrame([
-        {"path": r.uri_or_path, "label": r.label, "split": r.split} for r in rows
-    ])
+    return pd.DataFrame(
+        [{"path": r.uri_or_path, "label": r.label, "split": r.split} for r in rows]
+    )

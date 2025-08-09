@@ -1,5 +1,7 @@
-import json, os, pathlib
+import json
+import pathlib
 from importlib import import_module
+
 # Import FastAPI app at src/surgicalai/api/main.py with variable "app"
 mod = import_module("src.surgicalai.api.main")
 app = getattr(mod, "app")

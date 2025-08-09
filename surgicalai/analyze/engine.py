@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 from pathlib import Path
@@ -37,7 +38,6 @@ def run(case_dir: Path, config: Config) -> Dict[str, float]:
     LOGGER.info("classifier: %s", model_used)
     mesh = load_npz(case_dir / "mesh.npz")
     verts = mesh["vertices"]
-    n = len(verts)
     center = verts.mean(axis=0)
     d = np.linalg.norm(verts - center, axis=1)
     d = (d - d.min()) / (np.ptp(d) + 1e-6)

@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 """Stub contraindication checker."""
+
 from __future__ import annotations
 
 from typing import Dict, Any

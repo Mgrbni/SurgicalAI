@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 from pathlib import Path
@@ -117,7 +118,9 @@ def create_dataloaders(train_cfg: TrainConfig, data_cfg: DataConfig):
     counts = torch.bincount(torch.tensor([lbl for _, lbl in train_items]))
     weights = 1.0 / (counts.float() + 1e-6)
     sample_weights = [weights[lbl] for _, lbl in train_items]
-    sampler = WeightedRandomSampler(sample_weights, len(sample_weights), replacement=True)
+    sampler = WeightedRandomSampler(
+        sample_weights, len(sample_weights), replacement=True
+    )
 
     train_loader = DataLoader(
         train_ds,

@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 """Rendering helpers for PNG overlays and HTML reports."""
+
 from __future__ import annotations
 
 import base64
@@ -6,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,7 +25,9 @@ def overlay_heatmap(mesh_data: Dict[str, Any], heatmap: np.ndarray, path: Path) 
     plt.close(fig)
 
 
-def overlay_flap(mesh_data: Dict[str, Any], flap_plan: Dict[str, Any], path: Path) -> None:
+def overlay_flap(
+    mesh_data: Dict[str, Any], flap_plan: Dict[str, Any], path: Path
+) -> None:
     coords = mesh_data["coordinates"]
     fig, ax = plt.subplots()
     ax.scatter(coords[:, 0], coords[:, 1], s=1, alpha=0.3)
@@ -32,7 +37,7 @@ def overlay_flap(mesh_data: Dict[str, Any], flap_plan: Dict[str, Any], path: Pat
     v = vectors[:, 1] - origin[1]
     x0 = np.full_like(u, origin[0])
     y0 = np.full_like(v, origin[1])
-    ax.quiver(x0, y0, u, v, angles='xy', scale_units='xy', scale=1)
+    ax.quiver(x0, y0, u, v, angles="xy", scale_units="xy", scale=1)
     fig.savefig(path)
     plt.close(fig)
 

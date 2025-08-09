@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 """Biomechanical validation stubs."""
+
 from __future__ import annotations
 
 from typing import Dict, Any

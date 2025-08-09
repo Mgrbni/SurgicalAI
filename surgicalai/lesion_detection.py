@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 """Lightweight lesion detection mock using deterministic data."""
+
 from __future__ import annotations
 
 from typing import Dict, Any
@@ -10,7 +12,9 @@ from .utils import seed_everything
 CLASSES = ["melanoma", "nevus", "seb_keratosis"]
 
 
-def detect(mesh_data: Dict[str, Any], device: str = "cpu", weights: str | None = None) -> Dict[str, Any]:
+def detect(
+    mesh_data: Dict[str, Any], device: str = "cpu", weights: str | None = None
+) -> Dict[str, Any]:
     """Return fake classification probabilities and a heatmap array."""
     seed_everything(0)
     probs = np.array([0.2, 0.5, 0.3])

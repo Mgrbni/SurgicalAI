@@ -12,7 +12,10 @@ license = {text = "Apache-2.0"}
 authors = [{name = "Surgical AI Team"}]
 
 [project.scripts]
-surgicalai = "surgicalai.cli:main"
+surgicalai = "surgicalai.cli:app"
+
+[project.optional-dependencies]
+demo = ["gradio", "fastapi", "uvicorn"]
 
 [tool.setuptools.packages.find]
 include = ["surgicalai"]

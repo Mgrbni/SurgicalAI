@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 """Polycam mesh parsing utilities."""
+
 from __future__ import annotations
 
 from pathlib import Path

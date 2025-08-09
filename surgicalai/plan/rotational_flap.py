@@ -1,7 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 
@@ -33,7 +34,7 @@ def run(case_dir: Path, config: Config) -> Dict[str, object]:
         "arc": arc,
         "tension_axis": tension_axis,
         "success_prob": success,
-        "notes": "auto-generated"
+        "notes": "auto-generated",
     }
     write_json(case_dir / "flap_plan.json", plan)
     LOGGER.info("planning complete")
