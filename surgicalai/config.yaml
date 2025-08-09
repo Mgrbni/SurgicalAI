@@ -1,5 +1,0 @@
-strain_thresh: 0.25
-vessel_risk_mm: [5, 10]
-render_views: 8
-img_size: 512
-outputs_dir: ./outputs

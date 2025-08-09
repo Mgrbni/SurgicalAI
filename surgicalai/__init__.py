@@ -1,5 +1,4 @@
-"""surgicalai package."""
+"""SurgicalAI prototype package."""
 
-from .config import AppConfig, config, load_config
-
-__all__ = ["AppConfig", "config", "load_config"]
+__all__ = []
+__version__ = "0.1.0"

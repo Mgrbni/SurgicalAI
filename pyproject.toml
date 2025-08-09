@@ -12,4 +12,12 @@ license = {file = "LICENSE"}
 authors = [{name = "Surgical AI Team"}]
 
 [project.scripts]
-surgicalai = "surgicalai.cli:app"
+surgicalai = "surgicalai_cli:app"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
