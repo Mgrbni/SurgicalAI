@@ -1,0 +1,8 @@
+paths:
+  data: data
+  models: models
+  outputs: outputs
+render_views: 8
+img_size: 256
+strain_thresh: 0.25
+vessel_risk_mm: [5,10]
