@@ -14,3 +14,7 @@ node_modules/
 # IDE
 .idea/
 .vscode/
+
+# Demo artifacts
+runs/
+data/samples/*.jpg
