@@ -1,4 +1,3 @@
-# surgicalai_demo/pipeline.py
 from __future__ import annotations
 
 import json
@@ -20,6 +19,15 @@ from .features import (
 from .rules import plan_reconstruction, triage_tier0
 from .retrieval import SimpleAnn, feature_vector_from_abcde, save_thumbnails
 from .report import make_pdf
+
+# Import new ensemble classifier
+try:
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+    from surgicalai.vision.ensemble import EnsembleClassifier
+    ENSEMBLE_AVAILABLE = True
+except ImportError:
+    ENSEMBLE_AVAILABLE = False
 
 
 # -------------------------- utility helpers --------------------------
@@ -115,7 +123,7 @@ def run_demo(
         meta["known_scale_mm_per_px"] = _safe_float(_prompt_optional("  Known scale (mm per pixel, e.g., 0.02) or blank: ").strip(), None)
 
     # 3) ABCDE features + basic lesion metrics (pixels)
-    abcde = compute_abcde(img_rgb)  # dict‑like
+    abcde = compute_abcde(img_rgb)  # now returns dict
     # Ensure stable keys exist
     abcde.setdefault("diameter_px", abcde.get("diameter_px", None))
     abcde.setdefault("center_xy", abcde.get("center_xy", None))
@@ -135,16 +143,54 @@ def run_demo(
     }
     metrics_mm = defect_metrics_px_to_mm(metrics_px, mm_per_px) if mm_per_px else None
 
-    # 5) Tier‑0 triage — returns STRING label; use directly without attribute access
-    tri_label = triage_tier0(abcde, age=meta["age"], body_site=meta["body_site"])
-    
-    # 6) Very simple class probs for planner (demo safe)
-    # If you have a classifier, replace these with real outputs.
-    probs: Dict[str, float] = {
-        "melanoma": float(abcde.get("melanoma_prob", 0.0) or 0.0),
-        "bcc": float(abcde.get("bcc_prob", 0.0) or 0.0),
-        "scc": float(abcde.get("scc_prob", 0.0) or 0.0),
-    }
+    # 5) Enhanced diagnosis using ensemble classifier
+    if ENSEMBLE_AVAILABLE:
+        try:
+            ensemble = EnsembleClassifier()
+            # Prepare features for ensemble
+            ensemble_features = {
+                "asymmetry": abcde.get("asymmetry", 0.0),
+                "border_irregularity": abcde.get("border_irregularity", 0.0),
+                "color_variegation": abcde.get("color_variegation", 0.0),
+                "diameter_mm": (metrics_mm or {}).get("diameter_mm", 0.0),
+                "elevation_satellite": abcde.get("elevation_satellite", 0.0),
+                **{k: v for k, v in abcde.items() if isinstance(v, (int, float))}
+            }
+            
+            ensemble_result = ensemble.predict(ensemble_features)
+            
+            # Extract top diagnoses probabilities for planning
+            probs = {}
+            for diag_result in ensemble_result.top_diagnoses:
+                if diag_result.diagnosis in ["melanoma", "bcc", "scc"]:
+                    probs[diag_result.diagnosis] = diag_result.probability
+            
+            # Use ensemble triage if available
+            top_diagnosis = ensemble_result.top_diagnoses[0].diagnosis if ensemble_result.top_diagnoses else "unknown"
+            tri_label = f"ENSEMBLE: {top_diagnosis} ({ensemble_result.top_diagnoses[0].probability:.2f})" if ensemble_result.top_diagnoses else "ENSEMBLE: uncertain"
+            
+            if ensemble_result.high_risk_flag:
+                tri_label = "RED FLAG (ENSEMBLE)"
+                
+        except Exception as e:
+            print(f"Ensemble classifier failed: {e}")
+            # Fallback to original triage
+            ensemble_result = None
+            tri_label = triage_tier0(abcde, age=meta["age"], body_site=meta["body_site"])
+            probs = {
+                "melanoma": float(abcde.get("melanoma_prob", 0.0) or 0.0),
+                "bcc": float(abcde.get("bcc_prob", 0.0) or 0.0),
+                "scc": float(abcde.get("scc_prob", 0.0) or 0.0),
+            }
+    else:
+        # Fallback to original triage system
+        ensemble_result = None
+        tri_label = triage_tier0(abcde, age=meta["age"], body_site=meta["body_site"])
+        probs = {
+            "melanoma": float(abcde.get("melanoma_prob", 0.0) or 0.0),
+            "bcc": float(abcde.get("bcc_prob", 0.0) or 0.0),
+            "scc": float(abcde.get("scc_prob", 0.0) or 0.0),
+        }
 
     # 7) Planning (oncology gates + flap suggestions)
     plan = plan_reconstruction(
@@ -158,6 +204,7 @@ def run_demo(
         margin_status=None,
     )
 
+    # 8) Retrieval (optional; non‑fatal if assets missing)
     # 8) Retrieval (optional; non‑fatal if assets missing)
     neighbors_info: Dict[str, Any] = {}
     try:
@@ -187,7 +234,7 @@ def run_demo(
     )
 
     summary: Dict[str, Any] = {
-          "triage": {
+        "triage": {
             "label": str(tri_label),
         },
         "probs": probs,
@@ -199,9 +246,26 @@ def run_demo(
         },
         **neighbors_info,
     }
+    
+    # Add ensemble results to summary if available
+    if ensemble_result:
+        summary["ensemble_diagnosis"] = {
+            "top_diagnoses": [
+                {
+                    "diagnosis": d.diagnosis,
+                    "probability": d.probability,
+                    "confidence_interval": d.confidence_interval,
+                    "confidence_score": d.confidence_score
+                }
+                for d in ensemble_result.top_diagnoses
+            ],
+            "uncertainty_score": ensemble_result.uncertainty_score,
+            "high_risk_flag": ensemble_result.high_risk_flag,
+            "feature_explanations": ensemble_result.feature_explanations
+        }
 
     with open(out_dir / "ai_summary.json", "w", encoding="utf-8") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
+        json.dump(summary, f, ensure_ascii=False, indent=2, default=str)
 
     # 11) PDF report (best effort)
     try:
@@ -210,9 +274,9 @@ def run_demo(
             summary=summary,
             overlay_path=(out_dir / "overlay.png") if overlay_path else None,
         )
-    except Exception:
-        # PDF is optional in the demo; continue silently
-        pass
+    except Exception as e:
+        # PDF is optional in the demo; continue silently but log error
+        print(f"PDF generation failed: {e}")
 
     print(f"\n✅ Demo complete. Outputs in: {out_dir}")
     return summary
