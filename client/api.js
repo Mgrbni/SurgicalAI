@@ -76,31 +76,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load facial subunits from API
   async function loadFacialSubunits() {
+    // Provide immediate visual feedback while loading
+    siteDropdown.innerHTML = '<option value="" disabled selected>Loading facial subunits...</option>';
+    siteDropdown.disabled = true;
+    const fallback = [
+      { value: 'forehead', label: 'Forehead' },
+      { value: 'temple', label: 'Temple' },
+      { value: 'cheek_medial', label: 'Medial Cheek' },
+      { value: 'cheek_lateral', label: 'Lateral Cheek' },
+      { value: 'nose_dorsum', label: 'Nasal Dorsum' },
+      { value: 'nose_tip', label: 'Nasal Tip' },
+      { value: 'nose_ala', label: 'Nasal Ala' },
+      { value: 'lip_upper', label: 'Upper Lip' },
+      { value: 'lip_lower', label: 'Lower Lip' },
+      { value: 'chin', label: 'Chin' }
+    ];
     try {
-      const response = await fetch('/api/facial-subunits');
+      const response = await fetch('/api/facial-subunits', { cache: 'no-store' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
       const data = await response.json();
-      
-      // Clear loading text
+
+      const items = Array.isArray(data?.subunits) && data.subunits.length ? data.subunits : fallback;
       siteDropdown.innerHTML = '<option value="" disabled selected>Select facial subunit...</option>';
-      
-      // Populate dropdown with curated options
-      if (data.subunits) {
-        data.subunits.forEach(item => {
-          const option = document.createElement('option');
-          option.value = item.value;
-          option.textContent = item.label;
-          siteDropdown.appendChild(option);
-        });
-        
-        // Restore saved selection
-        if (formState.subunit) {
-          siteDropdown.value = formState.subunit;
-        }
+      items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = item.label;
+        siteDropdown.appendChild(option);
+      });
+      if (formState.subunit && items.some(i => i.value === formState.subunit)) {
+        siteDropdown.value = formState.subunit;
       }
+      siteDropdown.disabled = false;
     } catch (error) {
-      console.error('Failed to load facial subunits:', error);
-      showToast('Failed to load facial subunits. Please refresh the page.');
+      console.error('Failed to load facial subunits from API, using fallback:', error);
+      // Fallback population
+      siteDropdown.innerHTML = '<option value="" disabled selected>Select facial subunit...</option>';
+      fallback.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = item.label;
+        siteDropdown.appendChild(option);
+      });
+      siteDropdown.disabled = false;
+      showToast('Loaded fallback facial subunits (offline mode).');
     }
+    // Ensure state + button refresh after population
+    updateFormState();
   }
 
   // Set up file upload
