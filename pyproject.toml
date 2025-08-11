@@ -11,7 +11,6 @@ dependencies = [
     "scikit-image>=0.20.0",
     "opencv-python>=4.8.0",
     "pillow>=10.0.0",
-    "mediapipe>=0.10.0",
     "torch>=2.0.0",
     "torchvision>=0.15.0",
     "jinja2>=3.1.0",
@@ -48,6 +47,9 @@ dev = [
     "ruff>=0.4.0",
     "types-PyYAML",
     "types-requests",
+]
+vision = [
+    "mediapipe>=0.10.0",
 ]
 
 [tool.ruff]
