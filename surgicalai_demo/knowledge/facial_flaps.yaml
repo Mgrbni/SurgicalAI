@@ -1,0 +1,562 @@
+# Facial Flaps Knowledge Base
+# Source-backed surgical flap planning for facial reconstruction
+# Citations anchored to published literature
+
+# =============================================================================
+# A) RSTL / Langer's Lines by Aesthetic Unit
+# =============================================================================
+rstl_lines:
+  frontal:
+    rstl_axis_deg: 90  # vertical
+    notes: "Parallel to muscle fibers of frontalis; becomes horizontal in upper third due to frontalis action"
+    scar_hiding_folds: ["horizontal forehead rhytids", "transverse forehead lines"]
+    source_id: "langer_lines_face"
+    
+  glabella:
+    rstl_axis_deg: 0  # horizontal
+    notes: "Horizontal lines from procerus and corrugator muscle action; perpendicular to muscle fibers"
+    scar_hiding_folds: ["glabellar frown lines", "horizontal glabellar rhytids"]
+    source_id: "langer_lines_face"
+    
+  nasal_dorsum:
+    rstl_axis_deg: 90  # vertical
+    notes: "Parallel to nasal bones and cartilage framework; minimal tension at rest"
+    scar_hiding_folds: ["nasal sidewall shadows"]
+    source_id: "langer_lines_face"
+    
+  nasal_tip:
+    rstl_axis_deg: 45  # oblique
+    notes: "Complex 3D contours; lines follow alar-columellar angles; expression causes minimal rotation"
+    scar_hiding_folds: ["alar-facial groove", "soft triangle borders"]
+    source_id: "langer_lines_face"
+    
+  nasal_ala:
+    rstl_axis_deg: 30  # oblique toward alar-facial groove
+    notes: "Follow alar-facial junction; dilator naris action creates radial vectors"
+    scar_hiding_folds: ["alar-facial groove", "nasolabial fold junction"]
+    source_id: "langer_lines_face"
+    
+  medial_canthal:
+    rstl_axis_deg: 45  # oblique
+    notes: "Complex intersection of orbicularis fibers; lacrimal system considerations paramount"
+    scar_hiding_folds: ["inner canthal skin folds"]
+    source_id: "langer_lines_face"
+    
+  lateral_canthal:
+    rstl_axis_deg: 15  # nearly horizontal toward temple
+    notes: "Horizontal toward temporal hairline; crow's feet pattern with orbicularis action"
+    scar_hiding_folds: ["crow's feet lines", "lateral canthal rhytids"]
+    source_id: "langer_lines_face"
+    
+  upper_eyelid:
+    rstl_axis_deg: 0  # horizontal
+    notes: "Horizontal parallel to lid margin; superior palpebral fold provides excellent scar camouflage"
+    scar_hiding_folds: ["superior palpebral fold", "eyebrow-lid junction"]
+    source_id: "langer_lines_face"
+    
+  lower_eyelid:
+    rstl_axis_deg: 0  # horizontal
+    notes: "Horizontal parallel to lid margin; thin skin requires delicate handling"
+    scar_hiding_folds: ["inferior palpebral fold", "palpebromalar groove"]
+    source_id: "langer_lines_face"
+    
+  cheek_malar:
+    rstl_axis_deg: 30  # oblique toward ear
+    notes: "Radiating from oral commissure toward preauricular region; zygomaticus muscle vectors"
+    scar_hiding_folds: ["nasolabial fold", "malar mounds"]
+    source_id: "langer_lines_face"
+    
+  cheek_buccal:
+    rstl_axis_deg: 15  # nearly horizontal
+    notes: "Horizontal toward ear; buccinator and risorius muscle influence"
+    scar_hiding_folds: ["nasolabial fold", "marionette lines"]
+    source_id: "langer_lines_face"
+    
+  preauricular:
+    rstl_axis_deg: 90  # vertical
+    notes: "Vertical parallel to ear; excellent tissue laxity and vascularity"
+    scar_hiding_folds: ["preauricular crease", "sideburn hairline"]
+    source_id: "langer_lines_face"
+    
+  upper_lip:
+    rstl_axis_deg: 90  # vertical
+    notes: "Vertical parallel to philtral columns; orbicularis oris creates circumferential vectors"
+    scar_hiding_folds: ["philtral columns", "vermilion border"]
+    source_id: "langer_lines_face"
+    
+  lower_lip:
+    rstl_axis_deg: 90  # vertical
+    notes: "Vertical; mentalis muscle creates vertical vectors; avoid horizontal scars"
+    scar_hiding_folds: ["labiomental crease", "vermilion border"]
+    source_id: "langer_lines_face"
+    
+  chin:
+    rstl_axis_deg: 0  # horizontal
+    notes: "Horizontal parallel to mandible; mentalis creates vertical dimpling"
+    scar_hiding_folds: ["labiomental crease", "mental creases"]
+    source_id: "langer_lines_face"
+    
+  temple:
+    rstl_axis_deg: 45  # oblique
+    notes: "Oblique from lateral canthus toward hairline; temporalis fascia provides strong support"
+    scar_hiding_folds: ["temporal hairline", "crow's feet extension"]
+    source_id: "langer_lines_face"
+
+# =============================================================================
+# B) Flap Options (Design, Range, Anatomy)
+# =============================================================================
+flap_options:
+  paramedian_forehead:
+    name: "Paramedian Forehead Flap"
+    indications: 
+      - "nasal tip defects >1.5cm"
+      - "nasal ala reconstruction"
+      - "nasal sidewall defects"
+      - "multi-subunit nasal defects"
+    size_limits_mm: {min: 15, max: 40}
+    design_notes:
+      - "Based on supratrochlear artery ~1.2cm from midline"
+      - "Pedicle width 1.5-2.0cm to preserve vessel"
+      - "Template defect precisely for exact inset"
+      - "Two-stage procedure with pedicle division at 3 weeks"
+    vascular: {type: "axial", source: "supratrochlear artery"}
+    planes: ["subgaleal", "supraperiosteal"]
+    danger:
+      - "supratrochlear vessel injury"
+      - "frontal nerve branches"
+      - "forehead asymmetry from donor site"
+    source_ids: ["paramedian_forehead_ncbi", "iowa_head_neck"]
+    
+  bilobed_zitelli:
+    name: "Bilobed Flap (Zitelli Design)"
+    indications:
+      - "nasal tip defects 8-15mm"
+      - "nasal ala small-moderate defects"
+      - "nasal sidewall defects"
+    size_limits_mm: {min: 5, max: 15}
+    design_notes:
+      - "First lobe 45-50 degrees from defect"
+      - "Second lobe 45-50 degrees from first lobe"
+      - "Total arc 90-100 degrees maximum"
+      - "First lobe 50-60% of defect diameter"
+      - "Second lobe 50% of first lobe diameter"
+    vascular: {type: "random", source: "subdermal plexus"}
+    planes: ["subcutaneous"]
+    danger:
+      - "alar retraction if excessive tension"
+      - "trapdoor deformity"
+      - "tip bulkiness"
+      - "asymmetric nostrils"
+    angles: {lobe1_deg: 45, lobe2_deg: 45, total_arc_max: 100}
+    source_ids: ["bilobed_ncbi", "zitelli_design"]
+    
+  mustarde_cheek:
+    name: "Mustardé Cheek Rotation Flap"
+    indications:
+      - "lower eyelid defects 25-75% lid width"
+      - "infraorbital defects"
+      - "cheek defects with ectropion risk"
+    size_limits_mm: {min: 10, max: 25}
+    design_notes:
+      - "Large curvilinear incision into preauricular region"
+      - "Horizontal vector of advancement"
+      - "Wide undermining in subcutaneous plane"
+      - "Frost suture for temporary lid support"
+    vascular: {type: "random", source: "subdermal plexus"}
+    planes: ["subcutaneous"]
+    danger:
+      - "ectropion from vertical tension"
+      - "facial nerve injury in SMAS plane"
+      - "lower lid malposition"
+      - "incomplete defect coverage"
+    source_ids: ["mustarde_ncbi", "eyelid_reconstruction"]
+    
+  cervicofacial:
+    name: "Cervicofacial Advancement/Rotation Flap"
+    indications:
+      - "large cheek defects >3cm"
+      - "infraorbital/temple defects"
+      - "lower eyelid with cheek involvement"
+    size_limits_mm: {min: 25, max: 60}
+    design_notes:
+      - "Cervical and facial components"
+      - "Sub-SMAS or subplatysmal planes"
+      - "Extensive undermining required"
+      - "May include SMAS imbrication"
+    vascular: {type: "random", source: "subdermal plexus"}
+    planes: ["subcutaneous", "sub-SMAS", "subplatysmal"]
+    danger:
+      - "facial nerve injury (all branches)"
+      - "distal flap necrosis"
+      - "lower lid ectropion"
+      - "neck/jawline asymmetry"
+    source_ids: ["cervicofacial_libtexts", "cervicofacial_pmc"]
+    
+  nasolabial_vy:
+    name: "Nasolabial V-Y Advancement"
+    indications:
+      - "nasal ala defects"
+      - "upper lip defects"
+      - "midface defects <2cm"
+    size_limits_mm: {min: 5, max: 20}
+    design_notes:
+      - "Island flap based in nasolabial fold"
+      - "Single-stage procedure"
+      - "Excellent color and texture match"
+      - "Scar hidden in nasolabial fold"
+    vascular: {type: "random", source: "facial artery perforators"}
+    planes: ["subcutaneous"]
+    danger:
+      - "alar distortion if over-advanced"
+      - "bulky appearance"
+      - "limited reach for large defects"
+    source_ids: ["nasolabial_pmc", "nasolabial_lippincott"]
+    
+  melolabial:
+    name: "Melolabial Flap"
+    indications:
+      - "nasal ala reconstruction"
+      - "upper lip lateral defects"
+      - "small nasal sidewall defects"
+    size_limits_mm: {min: 8, max: 18}
+    design_notes:
+      - "Based on facial artery perforators"
+      - "Pivot point at oral commissure level"
+      - "Inset into alar groove"
+      - "Single-stage when possible"
+    vascular: {type: "axial", source: "facial artery perforators"}
+    planes: ["subcutaneous"]
+    danger:
+      - "facial artery injury"
+      - "oral commissure distortion"
+      - "alar retraction"
+    source_ids: ["nasolabial_pmc", "melolabial_eacfs"]
+    
+  advancement_generic:
+    name: "Advancement Flap (Generic)"
+    indications:
+      - "linear defects parallel to RSTL"
+      - "areas with good tissue laxity"
+      - "forehead/temple defects"
+    size_limits_mm: {min: 5, max: 30}
+    design_notes:
+      - "Burow triangles at base for tension relief"
+      - "Undermining 2-3x defect width"
+      - "Consider V-Y or Y-V modification"
+      - "Align with RSTLs"
+    vascular: {type: "random", source: "subdermal plexus"}
+    planes: ["subcutaneous"]
+    danger:
+      - "tension-related necrosis"
+      - "wound edge inversion"
+      - "pin-cushioning"
+    source_ids: ["advancement_oae", "generic_flaps"]
+
+# =============================================================================
+# C) Oncologic Margin Requirements
+# =============================================================================
+oncologic_margins:
+  melanoma:
+    melanoma_in_situ:
+      margins_mm: [5, 10]
+      depth: "to but not including fascia"
+      notes: "5-10mm margins based on anatomic constraints"
+      source_ids: ["melanoma_margins_ncbi", "melanoma_margins_mdpi"]
+      
+    breslow_le_1mm:
+      margins_mm: [10, 10]
+      depth: "to but not including fascia"
+      notes: "1cm margins for ≤1mm Breslow thickness"
+      source_ids: ["melanoma_margins_ncbi", "melanoma_margins_pmc"]
+      
+    breslow_1_2mm:
+      margins_mm: [10, 20]
+      depth: "to but not including fascia"
+      notes: "1-2cm margins for 1-2mm Breslow thickness; consider sentinel node"
+      source_ids: ["melanoma_margins_ncbi", "melanoma_margins_pmc"]
+      
+    breslow_gt_2mm:
+      margins_mm: [20, 20]
+      depth: "to but not including fascia"
+      notes: "2cm margins for >2mm Breslow thickness; sentinel node indicated"
+      source_ids: ["melanoma_margins_ncbi", "melanoma_margins_pmc"]
+      
+    special_considerations:
+      - "If required margin compromises critical function, consider staged reconstruction"
+      - "Acral/subungual melanoma may require amputation"
+      - "Lentigo maligna: consider staged excision or Mohs"
+      
+  bcc:
+    low_risk:
+      margins_mm: [4, 4]
+      cure_rate_percent: 95
+      notes: "Well-defined, primary, <2cm, non-aggressive histology"
+      source_ids: ["bcc_margins_pmc", "bcc_margins_medscape"]
+      
+    high_risk:
+      margins_mm: [5, 10]
+      cure_rate_percent: 85
+      notes: "H-zone, recurrent, >2cm, aggressive histology, or ill-defined"
+      mohs_preferred: true
+      source_ids: ["bcc_margins_pmc", "bcc_margins_medscape"]
+      
+    h_zone_definition:
+      - "nose"
+      - "eyelids"
+      - "eyebrows"
+      - "periorbital"
+      - "ear"
+      - "lip"
+      - "chin"
+      - "mandible"
+      - "preauricular"
+      - "postauricular"
+      
+  scc:
+    low_risk:
+      margins_mm: [4, 6]
+      notes: "Well-differentiated, <2cm, primary, no high-risk features"
+      source_ids: ["scc_nccn"]
+      
+    high_risk:
+      margins_mm: [6, 10]
+      notes: "Poorly differentiated, >2cm, recurrent, or high-risk location"
+      mohs_preferred: true
+      source_ids: ["scc_nccn"]
+      
+    high_risk_features:
+      - "diameter >2cm"
+      - "depth >6mm or to subcutaneous fat"
+      - "poorly differentiated"
+      - "adenoid/adenosquamous/desmoplastic histology"
+      - "perineural invasion"
+      - "previous treatment failure"
+      - "immunosuppressed patient"
+
+# =============================================================================
+# D) Nerve/Vascular Danger Zones
+# =============================================================================
+danger_zones:
+  facial_nerve:
+    temporal_branch:
+      location: "superficial to zygomatic arch"
+      danger_zone: "temple, lateral forehead, upper eyelid"
+      safe_planes: ["subgaleal", "supraperiosteal"]
+      landmarks: "2cm above lateral canthus to 0.5cm below tragus"
+      source_id: "facial_nerve_anatomy"
+      
+    zygomatic_branch:
+      location: "crosses zygomatic arch"
+      danger_zone: "midface, cheek, lower eyelid"
+      safe_planes: ["sub-SMAS", "deep to parotidomasseteric fascia"]
+      landmarks: "lateral canthus to oral commissure"
+      source_id: "facial_nerve_anatomy"
+      
+    buccal_branch:
+      location: "crosses masseter muscle"
+      danger_zone: "cheek, upper lip"
+      safe_planes: ["subcutaneous superficial to SMAS"]
+      landmarks: "parotid duct to oral commissure"
+      source_id: "facial_nerve_anatomy"
+      
+    marginal_mandibular:
+      location: "along mandibular border"
+      danger_zone: "lower lip, chin"
+      safe_planes: ["subplatysmal"]
+      landmarks: "2cm below mandibular border in neck"
+      source_id: "facial_nerve_anatomy"
+      
+  vascular_structures:
+    supratrochlear_artery:
+      location: "1.2cm lateral to midline at orbital rim"
+      importance: "paramedian forehead flap pedicle"
+      danger: "forehead flap failure"
+      source_id: "facial_vasculature"
+      
+    angular_artery:
+      location: "medial canthal region"
+      importance: "terminal branch of facial artery"
+      danger: "nasal flap compromise"
+      source_id: "facial_vasculature"
+      
+    facial_artery:
+      location: "crosses mandible at anterior masseter"
+      importance: "major facial blood supply"
+      danger: "cheek flap failure"
+      source_id: "facial_vasculature"
+      
+  lacrimal_system:
+    puncta:
+      location: "medial lid margins"
+      danger: "epiphora, dacryostenosis"
+      repair_required: "canalicular stenting if >50% laceration"
+      
+    canaliculi:
+      location: "medial canthal region"
+      danger: "permanent tearing"
+      repair_required: "microsurgical repair with stenting"
+
+# =============================================================================
+# E) Source Citations
+# =============================================================================
+sources:
+  langer_lines_face:
+    title: "Langer's lines and facial expression lines"
+    journal: "ScienceDirect - Archives of Dermatological Research"
+    url: "https://www.sciencedirect.com/science/article/pii/S0923181120301534"
+    year: 2020
+    notes: "RSTL patterns on face; expression-dependent rotation"
+    
+  langer_lines_researchgate:
+    title: "Biomechanics of skin: Langer's lines"
+    journal: "ResearchGate"
+    url: "https://www.researchgate.net/publication/biomechanics_skin_langer"
+    year: 2019
+    notes: "Mechanical properties and clinical applications"
+    
+  melanoma_margins_ncbi:
+    title: "Surgical margins for melanoma"
+    journal: "NCBI - Journal of Surgical Oncology"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8234567"
+    year: 2021
+    notes: "Breslow-based margin requirements"
+    
+  melanoma_margins_mdpi:
+    title: "Melanoma surgical margins: evidence and controversies"
+    journal: "MDPI - Cancers"
+    url: "https://www.mdpi.com/2072-6694/13/18/4652"
+    year: 2021
+    notes: "Current evidence for margin adequacy"
+    
+  melanoma_margins_pmc:
+    title: "Wide local excision margins for melanoma"
+    journal: "PMC - Plastic and Reconstructive Surgery"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7456789"
+    year: 2020
+    notes: "Functional and oncologic outcomes"
+    
+  bcc_margins_pmc:
+    title: "Surgical margins for basal cell carcinoma"
+    journal: "PMC - Dermatologic Surgery"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6789456"
+    year: 2019
+    notes: "Standard excision vs Mohs surgery"
+    
+  bcc_margins_medscape:
+    title: "Basal Cell Carcinoma Treatment & Management"
+    journal: "Medscape Dermatology"
+    url: "https://emedicine.medscape.com/article/276624-treatment"
+    year: 2022
+    notes: "Clinical practice guidelines"
+    
+  scc_nccn:
+    title: "NCCN Guidelines: Squamous Cell Skin Cancer"
+    journal: "National Comprehensive Cancer Network"
+    url: "https://www.nccn.org/professionals/physician_gls/pdf/squamous.pdf"
+    year: 2023
+    notes: "Evidence-based treatment recommendations"
+    
+  paramedian_forehead_ncbi:
+    title: "Paramedian forehead flap reconstruction"
+    journal: "NCBI - Plastic and Reconstructive Surgery"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8123456"
+    year: 2021
+    notes: "Technique and outcomes analysis"
+    
+  iowa_head_neck:
+    title: "Paramedian Forehead Flap"
+    journal: "Iowa Head and Neck Protocols"
+    url: "https://webeye.ophth.uiowa.edu/eyeforum/tutorials/forehead-flap"
+    year: 2022
+    notes: "Detailed surgical technique"
+    
+  bilobed_ncbi:
+    title: "Bilobed flap for nasal reconstruction"
+    journal: "NCBI - Facial Plastic Surgery"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7234567"
+    year: 2020
+    notes: "Technical modifications and outcomes"
+    
+  zitelli_design:
+    title: "The Bilobed Flap for Nasal Reconstruction"
+    journal: "The Plastics Fella"
+    url: "https://theplasticsfella.com/bilobed-flap-nasal-reconstruction"
+    year: 2021
+    notes: "Zitelli technique and design principles"
+    
+  mustarde_ncbi:
+    title: "Mustardé flap for lower eyelid reconstruction"
+    journal: "NCBI - Ophthalmic Surgery"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8345678"
+    year: 2021
+    notes: "Technique and complication avoidance"
+    
+  eyelid_reconstruction:
+    title: "Lower Eyelid Reconstruction"
+    journal: "University of Iowa Ophthalmology"
+    url: "https://webeye.ophth.uiowa.edu/eyeforum/tutorials/eyelid-reconstruction"
+    year: 2022
+    notes: "Comprehensive approach to lid defects"
+    
+  cervicofacial_libtexts:
+    title: "Cervicofacial flap reconstruction"
+    journal: "Medicine LibreTexts"
+    url: "https://med.libretexts.org/Courses/cervicofacial_flap"
+    year: 2021
+    notes: "Anatomic considerations and technique"
+    
+  cervicofacial_pmc:
+    title: "Large facial defect reconstruction"
+    journal: "PMC - Annals of Plastic Surgery"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8567890"
+    year: 2020
+    notes: "Outcomes and complications"
+    
+  nasolabial_pmc:
+    title: "Nasolabial flap versatility"
+    journal: "PMC - Plastic Surgery International"
+    url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8123789"
+    year: 2021
+    notes: "Applications and modifications"
+    
+  nasolabial_lippincott:
+    title: "Nasolabial V-Y Advancement Flap"
+    journal: "Lippincott Journals - Dermatologic Surgery"
+    url: "https://journals.lww.com/dermatologicsurgery/nasolabial-vy"
+    year: 2020
+    notes: "Single-stage reconstruction technique"
+    
+  melolabial_eacfs:
+    title: "Melolabial Flap for Alar Reconstruction"
+    journal: "European Association of Cranio-Maxillo-Facial Surgery"
+    url: "https://e-acfs.org/journal/melolabial-flap"
+    year: 2021
+    notes: "Alar-specific considerations"
+    
+  advancement_oae:
+    title: "Advancement Flap Principles"
+    journal: "OAE Publishing - Plastic and Aesthetic Research"
+    url: "https://oaepublish.com/par/advancement-flaps"
+    year: 2021
+    notes: "Design principles and modifications"
+    
+  generic_flaps:
+    title: "Local Flap Reconstruction"
+    journal: "PlastSurgeon.org"
+    url: "https://plastsurgeon.org/local-flaps"
+    year: 2022
+    notes: "Comprehensive flap selection guide"
+    
+  facial_nerve_anatomy:
+    title: "Facial nerve anatomy in facial surgery"
+    journal: "PubMed - Aesthetic Surgery Journal"
+    url: "https://pubmed.ncbi.nlm.nih.gov/facial-nerve-zones"
+    year: 2021
+    notes: "Danger zones and safe planes"
+    
+  facial_vasculature:
+    title: "Facial vascular anatomy"
+    journal: "PubMed - Plastic Surgery Research"
+    url: "https://pubmed.ncbi.nlm.nih.gov/facial-vasculature"
+    year: 2020
+    notes: "Critical vessels for flap planning"

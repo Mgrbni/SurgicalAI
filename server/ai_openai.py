@@ -51,38 +51,34 @@ SCHEMA_HINT = {
 }
 
 def summarize_case(full_metrics: dict) -> str:
-    from openai import OpenAI
-    import os
-    client = OpenAI()
+  """Generate a brief textual summary from metrics using OpenAI Responses API.
 
-    SYSTEM_MSG = (
-        "You are SurgicalAI, a cautious clinical summarizer. "
-        "Write a brief, structured, non-diagnostic summary for a plastic surgeon. "
-        "Flag uncertainty. Never give medical advice."
+  (Best-effort; falls through raising original exception allowing caller to handle.)
+  """
+  from openai import OpenAI  # local import to avoid mandatory dependency during cold paths
+  client = OpenAI()
+  sys_msg = (
+    "You are SurgicalAI, a cautious clinical summarizer. "
+    "Write a brief, structured, non-diagnostic summary for a plastic surgeon. "
+    "Flag uncertainty. Never give medical advice."
+  )
+  prompt = (
+    "Summarize the following pipeline results for a clinical demo. "
+    "Return 5 bullets: (1) Face/scan metadata, (2) Lesion detection probabilities, "
+    "(3) Heatmap region(s), (4) Flap design candidates with rationale, "
+    "(5) Risks/contraindications with confidence.\n\n" + str(full_metrics)
+  )
+  try:
+    resp = client.responses.create(
+      model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+      input=[{"role": "system", "content": sys_msg}, {"role": "user", "content": prompt}],
+      max_completion_tokens=700,
     )
-    prompt = (
-        "Summarize the following pipeline results for a clinical demo. "
-        "Return 5 bullets: (1) Face/scan metadata, (2) Lesion detection probabilities, "
-        "(3) Heatmap region(s), (4) Flap design candidates with rationale, "
-        "(5) Risks/contraindications with confidence.\n\n"
-        f"{full_metrics}"
-    )
-
+    return resp.output_text.strip()
+  except Exception as e:  # pragma: no cover - network dependent
     try:
-        resp = client.responses.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-            input=[
-                {"role": "system", "content": SYSTEM_MSG},
-                {"role": "user", "content": prompt},
-            ],
-            max_output_tokens=700,
-        )
-        return resp.output_text.strip()
-    except Exception as e:
-        # Dump the server’s JSON error if available — saves you 20 minutes
-        try:
-            from openai._exceptions import OpenAIError
-            if isinstance(e, OpenAIError) and e.response is not None:
-                raise RuntimeError(f"OpenAI error: {e.response.status_code} {e.response.text}") from e
-        finally:
-            raise
+      from openai._exceptions import OpenAIError  # type: ignore
+      if isinstance(e, OpenAIError) and getattr(e, 'response', None) is not None:
+        raise RuntimeError(f"OpenAI error: {e.response.status_code} {e.response.text}") from e
+    finally:
+      raise

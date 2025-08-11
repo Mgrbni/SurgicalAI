@@ -1,7 +1,59 @@
-model: "gpt-5-mini"     # fast UI glue; pin heavier routes to "gpt-5"
-max_output_tokens: 800
+# LLM Provider Configuration
+provider: "${PROVIDER:-openai}"
+openai_model: "${OPENAI_MODEL:-gpt-4o-mini}"
+anthropic_model: "${ANTHROPIC_MODEL:-claude-3-5-sonnet-20241022}"
+max_output_tokens: "${MAX_OUTPUT_TOKENS:-1200}"
+timeout_seconds: "${TIMEOUT_SECONDS:-45}"
+
+# Legacy settings
+model: "${OPENAI_MODEL:-gpt-4o-mini}"     # fast UI glue; pin heavier routes to "gpt-4"
 ui_streaming: true
 
 caps:
   max_tokens_per_request: 1200
   max_tokens_per_session: 6000
+
+# --- Vision classifier demo settings (NOT FOR CLINICAL USE) ---
+class_names: ["melanoma","bcc","scc","nevus","seborrheic_keratosis","benign_other"]
+temperature: 1.5  # temperature scaling for softmax calibration
+class_weight:
+  melanoma: 1.0
+  bcc: 1.0
+  scc: 1.0
+  nevus: 1.0
+  seborrheic_keratosis: 1.0
+  benign_other: 1.0
+class_bias:
+  melanoma: 0.0
+  bcc: 0.0
+  scc: 0.0
+  nevus: 0.0
+  seborrheic_keratosis: 0.0
+  benign_other: 0.0
+min_conf_for_gate: 0.55
+melanoma_defer_threshold: 0.30
+
+# --- Heatmap & ROI settings ---
+heatmap:
+  target_layer: "layer4.2"          # CNN layer for Grad-CAM (without "model." prefix)
+  roi_threshold: 0.35                # binary threshold for ROI detection
+  min_roi_area_px: 600               # minimum ROI area in pixels
+  roi_margin_pct: 0.18               # ROI expansion margin as percentage
+  roi_out_size: 512                  # output size for ROI zoom
+  alpha: 0.55                        # heatmap opacity for blending
+  contour_levels: [0.3, 0.5, 0.7]    # contour lines at these activation levels
+  colormap: "plasma"                 # perceptual colormap (plasma/magma)
+  gamma_correction: 1.2              # gamma for base image enhancement
+
+# --- Vision-LLM Fusion settings ---
+fusion:
+  use_vlm: true                      # enable Vision-LLM observer
+  cnn_weight: 0.7                    # weight for CNN predictions
+  vlm_weight: 0.3                    # weight for VLM predictions
+  sk_descriptor_bonus: 0.15          # boost for SK when descriptors match
+  melanoma_descriptor_bonus: 0.10    # boost for melanoma descriptors
+  bcc_descriptor_bonus: 0.05         # boost for BCC descriptors
+  scc_descriptor_bonus: 0.05         # boost for SCC descriptors
+  tie_margin: 0.06                   # margin for uncertainty detection
+  provider: "${VLM_PROVIDER:-openai}" # VLM provider (openai/anthropic)
+  gamma_correction: 1.2              # gamma for base image enhancement

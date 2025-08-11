@@ -1,314 +1,320 @@
-// SurgicalAI Client Application
-document.addEventListener('DOMContentLoaded', function() {
-  const imageUpload = document.getElementById('imageUpload');
-  const imagePreview = document.getElementById('imagePreview');
-  const dropArea = document.getElementById('dropArea');
-  const siteDropdown = document.getElementById('site');
-  const analyzeBtn = document.getElementById('analyzeBtn');
-  const progressSteps = document.getElementById('progressSteps');
-  const resultsPanel = document.getElementById('resultsPanel');
-  const probabilitiesContainer = document.getElementById('probabilitiesContainer');
-  const gateDecision = document.getElementById('gateDecision');
-  const artifacts = document.getElementById('artifacts');
-  const toast = document.getElementById('toast');
+// SurgicalAI Professional Dashboard API Client
+// Clean, modern fetch-based API with streaming support
 
-  let currentImageFile = null;
-  let formState = {
-    image: null,
-    subunit: '',
-    age: null,
-    sex: 'Male',
-    prior_histology: false,
-    ill_defined_borders: false,
-    recurrent: false
-  };
-
-  // Load form state from localStorage
-  function loadFormState() {
-    const saved = localStorage.getItem('surgicalai_form');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        formState = { ...formState, ...parsed };
-        
-        // Restore form values
-        if (formState.age) document.getElementById('age').value = formState.age;
-        document.getElementById('sex').value = formState.sex;
-        document.getElementById('priorHistology').checked = formState.prior_histology;
-        document.getElementById('illDefinedBorders').checked = formState.ill_defined_borders;
-        document.getElementById('recurrent').checked = formState.recurrent;
-      } catch (e) {
-        console.warn('Failed to load saved form state:', e);
-      }
-    }
-  }
-
-  // Save form state to localStorage
-  function saveFormState() {
-    localStorage.setItem('surgicalai_form', JSON.stringify(formState));
-  }
-
-  // Show toast message
-  function showToast(message, duration = 5000) {
-    toast.textContent = message;
-    toast.classList.add('show');
-    setTimeout(() => {
-      toast.classList.remove('show');
-    }, duration);
-  }
-
-  // Update form state and validate
-  function updateFormState() {
-    formState.age = document.getElementById('age').value ? parseInt(document.getElementById('age').value) : null;
-    formState.sex = document.getElementById('sex').value;
-    formState.subunit = siteDropdown.value;
-    formState.prior_histology = document.getElementById('priorHistology').checked;
-    formState.ill_defined_borders = document.getElementById('illDefinedBorders').checked;
-    formState.recurrent = document.getElementById('recurrent').checked;
-    
-    saveFormState();
-    
-    // Enable/disable analyze button
-    const hasImage = currentImageFile !== null;
-    const hasSubunit = formState.subunit !== '';
-    analyzeBtn.disabled = !(hasImage && hasSubunit);
-  }
-
-  // Load facial subunits from API
-  async function loadFacialSubunits() {
-    // Provide immediate visual feedback while loading
-    siteDropdown.innerHTML = '<option value="" disabled selected>Loading facial subunits...</option>';
-    siteDropdown.disabled = true;
-    const fallback = [
-      { value: 'forehead', label: 'Forehead' },
-      { value: 'temple', label: 'Temple' },
-      { value: 'cheek_medial', label: 'Medial Cheek' },
-      { value: 'cheek_lateral', label: 'Lateral Cheek' },
-      { value: 'nose_dorsum', label: 'Nasal Dorsum' },
-      { value: 'nose_tip', label: 'Nasal Tip' },
-      { value: 'nose_ala', label: 'Nasal Ala' },
-      { value: 'lip_upper', label: 'Upper Lip' },
-      { value: 'lip_lower', label: 'Lower Lip' },
-      { value: 'chin', label: 'Chin' }
-    ];
-    try {
-      const response = await fetch('/api/facial-subunits', { cache: 'no-store' });
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      const data = await response.json();
-
-      const items = Array.isArray(data?.subunits) && data.subunits.length ? data.subunits : fallback;
-      siteDropdown.innerHTML = '<option value="" disabled selected>Select facial subunit...</option>';
-      items.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.value;
-        option.textContent = item.label;
-        siteDropdown.appendChild(option);
-      });
-      if (formState.subunit && items.some(i => i.value === formState.subunit)) {
-        siteDropdown.value = formState.subunit;
-      }
-      siteDropdown.disabled = false;
-    } catch (error) {
-      console.error('Failed to load facial subunits from API, using fallback:', error);
-      // Fallback population
-      siteDropdown.innerHTML = '<option value="" disabled selected>Select facial subunit...</option>';
-      fallback.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.value;
-        option.textContent = item.label;
-        siteDropdown.appendChild(option);
-      });
-      siteDropdown.disabled = false;
-      showToast('Loaded fallback facial subunits (offline mode).');
-    }
-    // Ensure state + button refresh after population
-    updateFormState();
-  }
-
-  // Set up file upload
-  function setupFileUpload() {
-    // File input change
-    imageUpload.addEventListener('change', function() {
-      if (this.files && this.files[0]) {
-        previewImage(this.files[0]);
-      }
-    });
-
-    // Drag and drop
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      dropArea.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-      e.preventDefault();
-      e.stopPropagation();
+class SurgicalAI {
+    constructor() {
+        const DEFAULT_API = `${window.location.protocol}//${window.location.hostname}:7860`;
+        this.baseUrl = window.SURGICALAI_API_BASE || DEFAULT_API;
+        this.defaultHeaders = {
+            'Accept': 'application/json'
+        };
     }
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropArea.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropArea.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight() {
-      dropArea.classList.add('highlight');
+    // Health check
+    async getHealth() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/health`, {
+                cache: 'no-store'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Health check failed: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return {
+                ok: data.ok || false,
+                provider: data.provider || 'Unknown',
+                model: data.model || 'Unknown',
+                fallback: data.fallback || false,
+                time: new Date().toISOString()
+            };
+        } catch (error) {
+            console.warn('Health check failed:', error);
+            return {
+                ok: false,
+                provider: 'Offline',
+                model: 'N/A',
+                fallback: false,
+                time: new Date().toISOString()
+            };
+        }
     }
 
-    function unhighlight() {
-      dropArea.classList.remove('highlight');
-    }
+    // Main analysis endpoint
+    async postAnalyze({file, site, suspected, flags = {}}) {
+        if (!file || !site) {
+            throw new Error('File and site are required');
+        }
 
-    dropArea.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files && files.length) {
-        imageUpload.files = files;
-        previewImage(files[0]);
-      }
-    }
-    
-    // Click to select file
-    dropArea.addEventListener('click', function() {
-      imageUpload.click();
-    });
-  }
-
-  function previewImage(file) {
-    if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
-      showToast('Please upload a JPEG or PNG image.');
-      return;
-    }
-
-    currentImageFile = file;
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      imagePreview.src = e.target.result;
-      imagePreview.style.display = 'block';
-      dropArea.classList.add('has-image');
-      updateFormState();
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // Set up form listeners
-  function setupFormListeners() {
-    ['age', 'sex'].forEach(id => {
-      document.getElementById(id).addEventListener('change', updateFormState);
-    });
-    
-    ['priorHistology', 'illDefinedBorders', 'recurrent'].forEach(id => {
-      document.getElementById(id).addEventListener('change', updateFormState);
-    });
-    
-    siteDropdown.addEventListener('change', updateFormState);
-  }
-
-  // Analyze button
-  async function setupAnalyzeButton() {
-    analyzeBtn.addEventListener('click', async function() {
-      if (!currentImageFile || !formState.subunit) {
-        showToast('Please upload an image and select a facial subunit.');
-        return;
-      }
-
-      // Show progress
-      progressSteps.style.display = 'block';
-      resultsPanel.style.display = 'none';
-      progressSteps.innerHTML = '<p>Analyzing image...</p>';
-
-      try {
-        // Create FormData for multipart/form-data
         const formData = new FormData();
-        formData.append('file', currentImageFile);
-        formData.append('payload', JSON.stringify(formState));
+        formData.append('file', file);
 
-        // Send to API
+        const payload = {
+            subunit: site,
+            sex: flags.sex || 'Male',
+            ...flags
+        };
+
+        if (suspected) {
+            payload.diagnosis_override = suspected;
+        }
+
+        formData.append('payload', JSON.stringify(payload));
+
         const response = await fetch('/api/analyze', {
-          method: 'POST',
-          body: formData
+            method: 'POST',
+            body: formData
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server responded with ${response.status}: ${errorText}`);
+            const errorData = await response.json().catch(() => ({}));
+            const message = errorData.error?.message || `Server error: ${response.status}`;
+            const requestId = response.headers.get('x-request-id') || 'unknown';
+            
+            throw {
+                status: response.status,
+                message,
+                requestId,
+                raw: errorData
+            };
         }
 
-        const result = await response.json();
+        const data = await response.json();
         
-        if (!result.ok) {
-          throw new Error(result.error || 'Analysis failed');
+        return {
+            json: data,
+            artifacts: this.processArtifacts(data.artifacts_list || [])
+        };
+    }
+
+    // Streaming analysis with SSE
+    async openStream({file, site, suspected, flags = {}}) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('stream', '1');
+
+        const payload = {
+            subunit: site,
+            sex: flags.sex || 'Male',
+            ...flags
+        };
+
+        if (suspected) {
+            payload.diagnosis_override = suspected;
         }
 
-        // Display results
-        displayResults(result);
-      } catch (error) {
-        progressSteps.innerHTML = `<p class="error">Error: ${error.message}</p>`;
-        console.error('Analysis failed:', error);
-        showToast(`Analysis failed: ${error.message}`);
-      }
-    });
-  }
+        formData.append('payload', JSON.stringify(payload));
 
-  function displayResults(data) {
-    // Hide progress, show results
-    progressSteps.style.display = 'none';
-    resultsPanel.style.display = 'block';
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            body: formData
+        });
 
-    // Probabilities with bars
-    probabilitiesContainer.innerHTML = '';
-    if (data.lesion_probs) {
-      Object.entries(data.lesion_probs).forEach(([className, prob]) => {
-        const item = document.createElement('div');
-        item.className = 'probability-item';
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `Server error: ${response.status}`);
+        }
+
+        return new StreamingAnalysis(response);
+    }
+
+    // Process artifacts list into a usable format
+    processArtifacts(artifactsList) {
+        const artifacts = {};
         
-        const percentage = Math.round(prob * 100);
-        item.innerHTML = `
-          <span class="probability-label">${className.replace('_', ' ')}</span>
-          <div class="probability-bar">
-            <div class="probability-fill" style="width: ${percentage}%"></div>
-          </div>
-          <span class="probability-value">${percentage}%</span>
-        `;
+        artifactsList.forEach(artifact => {
+            artifacts[artifact.name] = {
+                url: `/api/artifact/${artifact.path}`,
+                path: artifact.path,
+                name: artifact.name
+            };
+        });
+
+        return artifacts;
+    }
+
+    // Get usage logs
+    async getLastUsage(limit = 10) {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/last-usage?limit=${limit}`);
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.warn('Failed to load usage logs:', error);
+        }
+        return [];
+    }
+
+    // Helper methods
+    formatProb = (p) => {
+        return Math.round((p || 0) * 100) + '%';
+    };
+
+    barWidth = (p) => {
+        return Math.round((p || 0) * 100) + '%';
+    };
+
+    getArtifactUrl = (path) => {
+        return `${this.baseUrl}/api/artifact/${path}`;
+    };
+
+    validateImageFile = (file) => {
+        if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
+            throw new Error('Please upload a valid JPEG or PNG image');
+        }
         
-        probabilitiesContainer.appendChild(item);
-      });
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+        if (file.size > MAX_SIZE) {
+            throw new Error('File size must be less than 10MB');
+        }
+        
+        return true;
+    };
+
+    formatFileSize = (bytes) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    normalizeError = (error, response) => {
+        return {
+            status: response?.status || 500,
+            message: error.message || 'Unknown error occurred',
+            requestId: response?.headers?.get('x-request-id') || 'unknown',
+            details: error
+        };
+    };
+}
+
+// Streaming analysis handler
+class StreamingAnalysis {
+    constructor(response) {
+        this.response = response;
+        this.reader = response.body.getReader();
+        this.decoder = new TextDecoder();
+        this.buffer = '';
+        this.chunks = [];
+        this.result = null;
     }
 
-    // Gate decision
-    if (data.gate) {
-      const status = data.gate.allow_flap ? 'Proceed' : 'Defer';
-      const color = data.gate.allow_flap ? 'proceed' : 'defer';
-      gateDecision.innerHTML = `
-        <span class="pill ${color}">${status}</span> 
-        ${data.gate.reason || ''}<br>
-        <small>${data.gate.guidance || ''}</small>
-      `;
+    async *stream() {
+        try {
+            while (true) {
+                const { done, value } = await this.reader.read();
+                if (done) break;
+
+                this.buffer += this.decoder.decode(value, { stream: true });
+                
+                // Process complete lines
+                const lines = this.buffer.split('\n');
+                this.buffer = lines.pop(); // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        
+                        if (data === '[DONE]') {
+                            if (this.result) {
+                                return this.result;
+                            } else {
+                                throw new Error('Stream completed without result');
+                            }
+                        }
+
+                        try {
+                            const eventData = JSON.parse(data);
+                            
+                            if (eventData.type === 'chunk') {
+                                this.chunks.push(eventData.content);
+                                yield {
+                                    type: 'chunk',
+                                    content: eventData.content,
+                                    accumulated: this.chunks.join('')
+                                };
+                            } else if (eventData.type === 'complete') {
+                                this.result = eventData.result;
+                                yield {
+                                    type: 'complete',
+                                    result: eventData.result
+                                };
+                            } else if (eventData.type === 'error') {
+                                throw new Error(eventData.error);
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse streaming data:', data);
+                        }
+                    }
+                }
+            }
+        } finally {
+            this.reader.releaseLock();
+        }
+
+        throw new Error('Stream ended unexpectedly');
     }
 
-    // Artifacts
-    if (data.artifacts) {
-      artifacts.innerHTML = `
-        <div class="thumbnails">
-          <img src="${data.artifacts.overlay_png}" alt="Overlay" class="thumbnail" />
-          <img src="${data.artifacts.heatmap_png}" alt="Heatmap" class="thumbnail" />
-        </div>
-        <div class="downloads">
-          <a href="${data.artifacts.report_pdf}" download>Download PDF</a>
-        </div>
-      `;
+    async collectResult() {
+        for await (const event of this.stream()) {
+            if (event.type === 'complete') {
+                return event.result;
+            }
+        }
+        throw new Error('Stream completed without result');
     }
-  }
+}
 
-  // Initialize
-  loadFormState();
-  loadFacialSubunits();
-  setupFileUpload();
-  setupFormListeners();
-  setupAnalyzeButton();
-  updateFormState();
-});
+// Cache management
+class ResultCache {
+    constructor() {
+        this.key = 'surgicalai_last_result';
+    }
+
+    save(result) {
+        try {
+            sessionStorage.setItem(this.key, JSON.stringify({
+                timestamp: Date.now(),
+                data: result
+            }));
+        } catch (error) {
+            console.warn('Failed to cache result:', error);
+        }
+    }
+
+    load() {
+        try {
+            const cached = sessionStorage.getItem(this.key);
+            if (cached) {
+                const { timestamp, data } = JSON.parse(cached);
+                // Cache valid for 1 hour
+                if (Date.now() - timestamp < 3600000) {
+                    return data;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load cached result:', error);
+        }
+        return null;
+    }
+
+    clear() {
+        try {
+            sessionStorage.removeItem(this.key);
+        } catch (error) {
+            console.warn('Failed to clear cache:', error);
+        }
+    }
+}
+
+// Global instance
+const surgicalAI = new SurgicalAI();
+const resultCache = new ResultCache();
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { SurgicalAI, StreamingAnalysis, ResultCache };
+}

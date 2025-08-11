@@ -1,7 +1,7 @@
 # surgicalai_demo/report.py
 from __future__ import annotations
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
@@ -69,14 +69,18 @@ def make_pdf(
     metrics: Dict[str, Any],
     overlay_png: str,
     neighbor_paths: List[str],
-    ai: Dict[str, Any] | None = None,
+    ai: Optional[Dict[str, Any]] = None,
+    overlay_zoom_png: Optional[str] = None,
+    overlay_full_png: Optional[str] = None,
+    observer: Optional[Dict[str, Any]] = None,
+    fusion: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Generate a 1–2 page PDF. Page 1: metrics/overlay/NN. Page 2: AI summary (if provided)."""
+    """Generate PDF with zoom + full overlay, observer + fusion summaries."""
     c = canvas.Canvas(str(pdf_path), pagesize=A4)
     W, H = A4
     c.setTitle(title)
 
-    # ---- Page 1 ----
+    # Page 1
     c.setFont("Helvetica-Bold", 14)
     c.drawString(2*cm, H-2*cm, title)
     c.setFont("Helvetica", 9)
@@ -85,45 +89,183 @@ def make_pdf(
     y = H-4*cm
     c.setFont("Helvetica", 10)
     fields = [
-        "label","risk_pct","rationale",
-        "asymmetry","border_irregularity","color_variegation",
-        "diameter_px","elevation_satellite",
-        "age","sex","body_site","photo_type","mm_per_px","filename"
+        "label","risk_pct","rationale","age","sex","body_site","photo_type","mm_per_px"
     ]
     for k in fields:
         if k in metrics and metrics[k] is not None:
             c.drawString(2*cm, y, f"{k}: {metrics[k]}")
-            y -= 0.6*cm
+            y -= 0.55*cm
 
-    # overlay image
+    primary_overlay = overlay_zoom_png or overlay_png
+    secondary_overlay = overlay_full_png if overlay_zoom_png else None
+    main_img_x, main_img_y = 10*cm, 8*cm
+    main_img_w = main_img_h = 8*cm
     try:
-        c.drawImage(str(overlay_png), 2*cm, 7*cm, width=8*cm, height=8*cm,
-                    preserveAspectRatio=True, mask="auto")
+        if primary_overlay:
+            c.drawImage(str(primary_overlay), main_img_x, main_img_y,
+                        width=main_img_w, height=main_img_h,
+                        preserveAspectRatio=True, mask='auto')
+            c.setFont("Helvetica", 8)
+            c.drawString(main_img_x, main_img_y - 0.45*cm, "ROI overlay with contours (0.3/0.5/0.7)")
     except Exception:
         pass
 
-    # neighbors
-    x0, y0 = 11*cm, 12*cm
-    w, h = 4*cm, 3*cm
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(x0, y0 + 1*cm, "Nearest confirmed cases")
-    for i, p in enumerate(neighbor_paths[:6]):
+    if secondary_overlay:
+        sx, sy = main_img_x, main_img_y - 4*cm
         try:
-            c.drawImage(p,
-                        x0 + (i % 2) * (w + 0.5*cm),
-                        y0 - 0.5*cm - (i // 2) * (h + 0.5*cm),
-                        width=w, height=h,
-                        preserveAspectRatio=True, mask="auto")
+            c.drawImage(str(secondary_overlay), sx, sy, width=3*cm, height=3*cm,
+                        preserveAspectRatio=True, mask='auto')
+            c.setFont("Helvetica", 8)
+            c.drawString(sx, sy - 0.3*cm, "Full overlay")
+        except Exception:
+            pass
+
+    # Nearest neighbors
+    x0, y0 = 2*cm, 12*cm
+    w_n, h_n = 3*cm, 2.5*cm
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(x0, y0 + 1*cm, "Nearest cases")
+    for i, pth in enumerate(neighbor_paths[:6]):
+        try:
+            c.drawImage(pth, x0 + (i % 2) * (w_n + 0.5*cm),
+                        y0 - 0.5*cm - (i // 2) * (h_n + 0.5*cm),
+                        width=w_n, height=h_n, preserveAspectRatio=True, mask='auto')
         except Exception:
             continue
 
-    # Add footer to first page
+    # Observer + fusion
+    table_y = main_img_y - 5.2*cm
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(main_img_x, table_y, "Observer")
+    table_y -= 0.4*cm
+    c.setFont("Helvetica", 8)
+    if observer:
+        desc = ", ".join(observer.get("descriptors", [])[:5]) or "-"
+        c.drawString(main_img_x, table_y, f"Primary: {observer.get('primary_pattern','-')}")
+        table_y -= 0.32*cm
+        c.drawString(main_img_x, table_y, f"Desc: {desc[:60]}")
+        table_y -= 0.32*cm
+        c.drawString(main_img_x, table_y, f"Rec: {observer.get('recommendation','-')}")
+        table_y -= 0.4*cm
+    else:
+        c.drawString(main_img_x, table_y, "(none)")
+        table_y -= 0.4*cm
+
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(main_img_x, table_y, "Fusion Top‑3")
+    table_y -= 0.4*cm
+    c.setFont("Helvetica", 8)
+    if fusion and fusion.get("top3"):
+        for cls, p in fusion["top3"][:3]:
+            c.drawString(main_img_x, table_y, f"{cls}: {p*100:.1f}%")
+            table_y -= 0.3*cm
+        note = fusion.get("notes", "")
+        if note:
+            c.drawString(main_img_x, table_y, note[:70])
+            table_y -= 0.35*cm
+    else:
+        c.drawString(main_img_x, table_y, "(n/a)")
+        table_y -= 0.35*cm
+
+    c.setFont("Helvetica", 7)
+    c.drawString(2*cm, 1.5*cm, "Not for clinical use. Research demonstration only.")
     add_footer(c, W, H)
     c.showPage()
 
-    # ---- Page 2: AI summary ----
     if ai:
         add_ai_page(c, W, H, ai)
         c.showPage()
-
     c.save()
+
+
+# Legacy wrapper kept for existing pipeline usage (summary based)
+def make_pdf_legacy(
+    out_path,
+    summary: Dict[str, Any],
+    overlay_path=None,
+) -> None:
+    """Legacy PDF generation function for backwards compatibility."""
+    from pathlib import Path
+    
+    # Extract data from summary
+    title = "SurgicalAI Analysis Report"
+    version = "Demo v1.0"
+    
+    # Build metrics from summary
+    metrics = {
+        "label": summary.get("triage", {}).get("label", "Unknown"),
+        "risk_pct": "N/A",
+        "rationale": "Demo analysis",
+    }
+    
+    # Add probability metrics
+    probs = summary.get("probs", {})
+    for class_name, prob in probs.items():
+        metrics[f"{class_name}_prob"] = f"{prob:.1%}"
+    
+    # Meta information
+    meta = summary.get("meta", {})
+    for key in ["age", "sex", "body_site", "photo_type", "mm_per_px"]:
+        if key in meta:
+            metrics[key] = meta[key]
+    
+    # Paths
+    paths = summary.get("paths", {})
+    overlay_png = str(overlay_path) if overlay_path and Path(overlay_path).exists() else None
+    
+    # Look for new overlay artifacts
+    overlay_zoom_png = None
+    overlay_full_png = None
+    
+    if overlay_path:
+        run_dir = Path(overlay_path).parent
+        zoom_path = run_dir / "overlay_zoom.png"
+        full_path = run_dir / "overlay_full.png"
+        
+        if zoom_path.exists():
+            overlay_zoom_png = str(zoom_path)
+        if full_path.exists():
+            overlay_full_png = str(full_path)
+    
+    # Neighbor paths
+    neighbors = summary.get("neighbors", [])
+    neighbor_paths = []
+    for neighbor in neighbors[:6]:
+        if isinstance(neighbor, dict) and "path" in neighbor:
+            neighbor_paths.append(neighbor["path"])
+    
+    # AI summary
+    ai_summary = None
+    if "plan" in summary:
+        plan = summary["plan"]
+        ai_summary = {
+            "triage_label": summary.get("triage", {}).get("label", "Unknown"),
+            "diagnosis_candidates": [
+                {"name": name, "probability_pct": prob * 100}
+                for name, prob in probs.items()
+            ],
+            "flap_plan": {
+                "indicated": plan.get("indicated", False),
+                "type": plan.get("type", "Unknown"),
+                "design_summary": plan.get("design_summary", ""),
+                "tension_lines": plan.get("tension_lines", ""),
+                "rotation_vector": plan.get("rotation_vector", ""),
+                "predicted_success_pct": plan.get("predicted_success_pct"),
+                "key_risks": ", ".join(plan.get("key_risks", [])),
+            }
+        }
+    
+    # Generate PDF
+    make_pdf(
+        pdf_path=out_path,
+        title=title,
+        version=version,
+        metrics=metrics,
+        overlay_png=overlay_png or "",
+        neighbor_paths=neighbor_paths,
+        ai=ai_summary,
+        overlay_zoom_png=overlay_zoom_png,
+        overlay_full_png=overlay_full_png,
+        observer=summary.get("observer"),
+        fusion=summary.get("fusion"),
+    )

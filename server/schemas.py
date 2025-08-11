@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Annotated
 from enum import Enum
 
 class SexEnum(str, Enum):
@@ -57,3 +57,27 @@ class LesionReport(BaseModel):
     cam_hotspots: List[LesionBox]
     recommended_flap: Optional[FlapPlan]
     warnings: List[str] = []
+
+# New schemas for LLM-based analysis
+class LesionProb(BaseModel):
+    """Probability for a specific diagnosis"""
+    label: str = Field(..., description="Diagnosis label (e.g., melanoma, bcc, scc)")
+    probability: Annotated[float, Field(ge=0, le=1, description="Probability between 0 and 1")]
+
+class FlapSuggestion(BaseModel):
+    """Surgical reconstruction suggestion"""
+    design: str = Field(..., description="Flap design name")
+    site: str = Field(..., description="Anatomical site")
+    tension_axes: Annotated[List[str], Field(min_length=1, max_length=3, description="Tension directions")]
+    rationale: str = Field(..., description="Clinical rationale")
+    predicted_success: Annotated[float, Field(ge=0, le=1, description="Success probability")]
+
+class AnalysisOutput(BaseModel):
+    """Complete analysis output from LLM"""
+    diagnosis_probs: List[LesionProb] = Field(..., description="Diagnoses sorted high to low probability")
+    primary_dx: str = Field(..., description="Primary diagnosis")
+    gradcam_notes: Optional[str] = Field(None, description="Grad-CAM analysis notes")
+    reconstruction_plan: Optional[FlapSuggestion] = Field(None, description="Reconstruction recommendation")
+    contraindications: List[str] = Field(default_factory=list, description="Contraindications")
+    warnings: List[str] = Field(default_factory=list, description="Warnings and precautions")
+    citations: List[str] = Field(default_factory=list, description="Literature references")

@@ -1,0 +1,115 @@
+meta:
+  version: 0.1
+  last_updated: 2025-08-11
+  notes: "Prototype oncologic margin & reconstruction rules (placeholder citations). Not for clinical use."
+
+diagnoses:
+  melanoma:
+    margins:
+      in_situ_mm: 5
+      breslow_lt_1_0_cm: 10
+      breslow_1_01_2_0_cm: 15   # guideline range 10–20 mm, choose midpoint 15 mm
+      breslow_gt_2_0_cm: 20
+    treatment:
+      modality: WLE
+      sentinel_node: "Consider SLNB based on depth (>0.8 mm) & site"
+      defer_flap: true
+    citations: ["MelanomaGuideline2024", "SLNBConsensus2023"]
+    notes: ["Defer flap until clear margins", "Consider SLNB by depth/site"]
+
+  bcc:
+    margins:
+      low_risk_mm: 4
+      high_risk: "Mohs preferred; else wider margins (≥5 mm)"
+    treatment:
+      modality: WLE_OR_MOHS
+      mohs_indications: ["H-zone", "recurrent", "aggressive subtype"]
+    citations: ["BCCGuideline2024"]
+
+  scc:
+    margins:
+      low_risk_mm: 6
+      high_risk: "Mohs or ≥6–10 mm depending on features"
+    treatment:
+      modality: WLE_OR_MOHS
+      high_risk_features: ["poor differentiation", "perineural", "immunosuppressed"]
+    citations: ["SCCGuideline2024"]
+
+  seborrheic_keratosis:
+    margins: none
+    treatment:
+      modality: NONE
+      options: ["shave", "curettage", "cryotherapy"]
+    citations: ["BenignLesionMgmt2023"]
+
+  nevus_compound:
+    margins: "1–2 mm if excised for cosmesis"
+    treatment:
+      modality: OPTIONAL_EXCISION
+    citations: ["NevusPracticeNote2022"]
+
+  benign_other:
+    margins: minimal
+    treatment:
+      modality: CONSERVATIVE
+    citations: ["GeneralDermRef2022"]
+
+site_rules:
+  upper_lip:
+    rstl_angle_deg: 0
+    danger: ["labial artery", "vermilion border distortion"]
+    reconstruction:
+      small_defect_mm: ["primary closure", "elliptical (parallel to RSTL)"]
+      medium_defect_mm: ["advancement flap"]
+      large_defect_mm: ["rotation flap", "Abbe flap (if crossing midline)"]
+  nose_tip:
+    rstl_angle_deg: 15
+    danger: ["alar rim distortion", "blood supply (angular/alar)"] 
+    reconstruction:
+      small_defect_mm: ["primary closure (rare)", "elliptical", "bilobed flap"]
+      medium_defect_mm: ["bilobed flap", "dorsal nasal flap"]
+      large_defect_mm: ["paramedian forehead flap"]
+  cheek:
+    rstl_angle_deg: 10
+    danger: ["facial nerve branches", "Stensen duct (parotid)"]
+    reconstruction:
+      small_defect_mm: ["primary closure", "elliptical"]
+      medium_defect_mm: ["advancement flap", "rotation flap"]
+      large_defect_mm: ["cervicofacial advancement"]
+  forehead:
+    rstl_angle_deg: 5
+    danger: ["frontal branch facial nerve"]
+    reconstruction:
+      small_defect_mm: ["primary closure"]
+      medium_defect_mm: ["A-T flap", "rotation flap"]
+      large_defect_mm: ["tissue expansion", "paramedian forehead flap (for nasal)" ]
+  temple:
+    rstl_angle_deg: 5
+    danger: ["temporal branch facial nerve"]
+    reconstruction:
+      small_defect_mm: ["primary closure"]
+      medium_defect_mm: ["rotation flap"]
+      large_defect_mm: ["skin graft", "local flaps"]
+  eyelid_upper:
+    rstl_angle_deg: 0
+    danger: ["levator", "lacrimal system"]
+    reconstruction:
+      small_defect_mm: ["primary closure"]
+      medium_defect_mm: ["advancement", "Tenzel flap"]
+      large_defect_mm: ["Mustarde flap", "free graft"]
+  eyelid_lower:
+    rstl_angle_deg: 0
+    danger: ["ectropion", "lacrimal drainage"]
+    reconstruction:
+      small_defect_mm: ["primary closure"]
+      medium_defect_mm: ["advancement", "rotation"]
+      large_defect_mm: ["Mustarde flap", "Hughes procedure"]
+
+defaults:
+  small_threshold_mm: 10
+  medium_threshold_mm: 20
+  tension_primary_threshold: 0.65   # ratio of gap length vs available laxity
+  success_base: 70
+  success_penalty_flap: 15
+  success_penalty_large: 20
+  citations_placeholder: ["PlaceholderRef1", "PlaceholderRef2"]

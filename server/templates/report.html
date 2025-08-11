@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SurgicalAI — Photo Analysis {{ run_id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="report.css">
+</head>
+<body>
+<header class="header">
+  <div class="brand">
+    <div class="logo">SurgicalAI</div>
+    <div class="meta">RUN {{ run_id }} · {{ created_at }}</div>
+  </div>
+  <div class="ribbon">NOT FOR CLINICAL USE — DEMO ONLY</div>
+</header>
+
+<main>
+  <section>
+    <h1>Case Summary</h1>
+    <div class="grid-2">
+      <div>
+        <h2>Probabilities</h2>
+        <ul class="bars">
+          {% for label, p in probs.items() %}
+          <li>
+            <span class="label">{{ label|capitalize }}</span>
+            <div class="bar"><span style="width: {{ (p*100)|round(1) }}%"></span></div>
+            <span class="val">{{ (p*100)|round(1) }}%</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div>
+        <h2>Oncology Gate</h2>
+        <div class="chip {{ gate.status|lower }}">{{ gate.status }}</div>
+        <p class="reason">{{ gate.reason }}</p>
+        {% if gate.guidance %}<p class="guidance">{{ gate.guidance }}</p>{% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h1>Images</h1>
+    <div class="grid-3">
+      <figure>
+        <img src="{{ original_path }}" alt="Original">
+        <figcaption>Original</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ heatmap_path }}" alt="Heatmap">
+        <figcaption>Heatmap</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ overlay_path }}" alt="Overlay">
+        <figcaption>Overlay</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  {% if metrics %}
+  <section>
+    <h1>Metrics</h1>
+    <table class="kv">
+      {% for k, v in metrics.items() %}
+      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+  {% endif %}
+</main>
+
+<footer class="footer">
+  Dr. Mehdi Ghorbani Karimabad – Plastic, Reconstructive &amp; Aesthetic Surgery · Generated {{ created_at }}Z
+</footer>
+</body>
+</html>

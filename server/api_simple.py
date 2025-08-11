@@ -75,7 +75,7 @@ async def analyze_lesion(
     file: UploadFile = File(...),
     payload: str = Form(...)
 ):
-    """Analyze lesion with multipart/form-data (file + JSON payload)."""
+    """Analyze lesion with enhanced pipeline including VLM observer and fusion."""
     logger.info(f"Received analyze request - file: {file.filename}, content_type: {file.content_type}")
     
     # Validate file type
@@ -101,74 +101,184 @@ async def analyze_lesion(
         raise HTTPException(status_code=400, detail=str(e))
     
     try:
-        # Create runs directory
-        runs_dir = Path("runs") / "demo"
+        # Import enhanced pipeline components
+        from surgicalai_demo.pipeline import run_demo
+        from datetime import datetime
+        import uuid
+        
+        # Create unique run directory
+        run_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_") + str(uuid.uuid4())[:4]
+        runs_dir = Path("runs") / run_id
         runs_dir.mkdir(parents=True, exist_ok=True)
         
         # Save uploaded image
-        image_path = runs_dir / file.filename
+        image_path = runs_dir / "input.jpg"
         with open(image_path, "wb") as f:
             content = await file.read()
             f.write(content)
         
         logger.info(f"Saved image to: {image_path}")
         
-        # Generate mock probabilities (in real implementation, this would call ML model)
-        import random
-        random.seed(42)  # For consistent demo results
+        # Extract parameters from payload
+        age = payload_data.get('age')
+        sex = payload_data.get('sex', '')
+        subunit = payload_data.get('subunit', 'cheek')
         
-        lesion_probs = {
-            "melanoma": round(random.uniform(0.1, 0.8), 2),
-            "nevus": round(random.uniform(0.1, 0.4), 2),
-            "seb_keratosis": round(random.uniform(0.05, 0.3), 2),
-            "bcc": round(random.uniform(0.05, 0.2), 2),
-            "scc": round(random.uniform(0.02, 0.15), 2)
+        # Set up metadata for enhanced pipeline
+        meta = {
+            'age': int(age) if age else None,
+            'sex': sex,
+            'body_site': subunit,
+            'photo_type': 'clinical',
+            'known_scale_mm_per_px': None
         }
         
-        # Normalize probabilities
-        total = sum(lesion_probs.values())
-        lesion_probs = {k: round(v/total, 2) for k, v in lesion_probs.items()}
+        # Run enhanced pipeline
+        summary = run_demo(
+            face_img_path=None,
+            lesion_img_path=image_path,
+            out_dir=runs_dir,
+            ask=False
+        )
         
-        # Generate gate decision based on melanoma probability
-        melanoma_prob = lesion_probs.get("melanoma", 0)
-        allow_flap = melanoma_prob < 0.3
-        gate_reason = "Low melanoma suspicion" if allow_flap else "High melanoma suspicion"
-        gate_guidance = "Consider flap reconstruction" if allow_flap else "Biopsy/WLE first"
+        # Extract results for API response
+        probs = summary.get("probs", {})
+        fusion_data = summary.get("fusion", {})
+        observer_data = summary.get("observer", {})
+        paths = summary.get("paths", {})
         
-        # Create mock artifacts
-        overlay_path = runs_dir / "overlay.png"
-        heatmap_path = runs_dir / "heatmap.png" 
-        report_path = runs_dir / "report.pdf"
+        # Determine gate decision
+        if fusion_data:
+            gate_status = fusion_data.get("gate", "")
+            gate_notes = fusion_data.get("notes", "")
+            top3 = fusion_data.get("top3", [])
+        else:
+            # Fallback gate logic
+            top_class = max(probs.items(), key=lambda x: x[1]) if probs else ("unknown", 0)
+            top_prob = top_class[1]
+            
+            if top_class[0] == "melanoma" and top_prob > 0.4:
+                gate_status = "RED — urgent dermatology referral"
+            elif top_prob < 0.3:
+                gate_status = "UNCERTAIN — clinical correlation recommended" 
+            else:
+                gate_status = f"Likely {top_class[0].replace('_', ' ')}"
+            
+            gate_notes = f"CNN prediction: {top_class[0]} ({top_prob:.1%})"
+            top3 = sorted(probs.items(), key=lambda x: x[1], reverse=True)[:3]
         
-        # Create simple placeholder files
-        if not overlay_path.exists():
-            overlay_path.write_text("PNG placeholder")
-        if not heatmap_path.exists():
-            heatmap_path.write_text("PNG placeholder")
-        if not report_path.exists():
-            report_path.write_text("PDF placeholder")
+        # Build artifact URLs (alignment with new spec)
+        artifacts = {
+            "overlay_full": f"/api/artifact/{run_id}/overlay_full.png" if paths.get("overlay_full_png") else None,
+            "overlay_zoom": f"/api/artifact/{run_id}/overlay_zoom.png" if paths.get("overlay_zoom_png") else None,
+            "pdf": f"/api/artifact/{run_id}/report.pdf",
+        }
+        # Filter out None values
+        artifacts = {k: v for k, v in artifacts.items() if v}
         
+        # Prepare response
         result = {
             "ok": True,
-            "lesion_probs": lesion_probs,
+            "run_id": run_id,
+            "probs": probs,
+            "top3": top3,
             "gate": {
-                "allow_flap": allow_flap,
-                "reason": gate_reason,
-                "guidance": gate_guidance
+                "status": gate_status,
+                "notes": gate_notes,
+                "allow_flap": "GREEN" in gate_status or "likely" in gate_status.lower()
             },
-            "artifacts": {
-                "overlay_png": f"/api/artifact/demo/overlay.png",
-                "heatmap_png": f"/api/artifact/demo/heatmap.png", 
-                "report_pdf": f"/api/artifact/demo/report.pdf"
-            }
+            "artifacts": artifacts
         }
+
+        # Observer full JSON per spec
+        if observer_data:
+            result["observer"] = {
+                "primary_pattern": observer_data.get("primary_pattern"),
+                "likelihoods": observer_data.get("likelihoods", {}),
+                "descriptors": observer_data.get("descriptors", []),
+                "abcd_estimate": observer_data.get("abcd_estimate", {}),
+                "recommendation": observer_data.get("recommendation"),
+            }
+
+        # Fusion block with top3 and notes per spec
+        if fusion_data:
+            result["fusion"] = {
+                "top3": fusion_data.get("top3", []),
+                "notes": fusion_data.get("fusion_notes", fusion_data.get("notes", "")),
+            }
         
-        logger.info(f"Analysis completed successfully")
+        logger.info(f"Enhanced analysis completed for run {run_id}")
         return result
         
+    except ImportError as e:
+        logger.error(f"Enhanced pipeline not available: {e}")
+        # Fallback to original simple analysis
+        return await _fallback_simple_analysis(file, payload_data, logger)
+        
     except Exception as e:
-        logger.error(f"Analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        logger.error(f"Enhanced analysis failed: {str(e)}")
+        # Try fallback analysis
+        try:
+            return await _fallback_simple_analysis(file, payload_data, logger)
+        except Exception as fallback_error:
+            logger.error(f"Fallback analysis also failed: {fallback_error}")
+            raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+async def _fallback_simple_analysis(file: UploadFile, payload_data: dict, logger):
+    """Fallback to simple analysis if enhanced pipeline fails."""
+    # Create runs directory
+    runs_dir = Path("runs") / "demo"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save uploaded image
+    image_path = runs_dir / file.filename
+    with open(image_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    logger.info(f"Fallback: Saved image to: {image_path}")
+    
+    # Generate mock probabilities
+    import random
+    random.seed(42)
+    
+    lesion_probs = {
+        "melanoma": round(random.uniform(0.1, 0.8), 2),
+        "nevus": round(random.uniform(0.1, 0.4), 2),
+        "seborrheic_keratosis": round(random.uniform(0.05, 0.3), 2),
+        "bcc": round(random.uniform(0.05, 0.2), 2),
+        "scc": round(random.uniform(0.02, 0.15), 2),
+        "benign_other": round(random.uniform(0.01, 0.1), 2)
+    }
+    
+    # Normalize probabilities
+    total = sum(lesion_probs.values())
+    lesion_probs = {k: round(v/total, 3) for k, v in lesion_probs.items()}
+    
+    # Generate gate decision
+    melanoma_prob = lesion_probs.get("melanoma", 0)
+    allow_flap = melanoma_prob < 0.3
+    gate_status = "Low melanoma suspicion" if allow_flap else "High melanoma suspicion"
+    
+    top3 = sorted(lesion_probs.items(), key=lambda x: x[1], reverse=True)[:3]
+    
+    return {
+        "ok": True,
+        "run_id": "demo-fallback",
+        "probs": lesion_probs,
+        "top3": top3,
+        "gate": {
+            "status": gate_status,
+            "notes": "Fallback analysis - enhanced pipeline unavailable",
+            "allow_flap": allow_flap
+        },
+        "artifacts": {
+            "overlay": "/api/artifact/demo/overlay.png",
+            "heatmap": "/api/artifact/demo/heatmap.png",
+            "pdf": "/api/artifact/demo/report.pdf"
+        }
+    }
 
 @app.get("/api/artifact/{path:path}")
 async def get_artifact(path: str):

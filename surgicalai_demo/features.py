@@ -5,12 +5,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Any
 import json
 import numpy as np
 import cv2
 from PIL import Image
 from skimage import filters, measure, morphology, exposure
+from datetime import datetime
 
 
 # ----------------------------- ABCDE model -----------------------------
@@ -160,7 +161,11 @@ def _elevation_satellite(blob: np.ndarray) -> float:
     return float(min(satellites, 5.0))
 
 
-def compute_abcde(rgb: np.ndarray) -> tuple[ABCDE, np.ndarray]:
+def compute_abcde(rgb: np.ndarray) -> Dict[str, Any]:
+    """Compute ABCDE features and lesion metrics from RGB image.
+    
+    Returns a dictionary instead of tuple for easier JSON serialization.
+    """
     skin = _skin_mask(rgb)
     lesion0 = _lesion_candidate(rgb, skin)
     blob = _largest_blob(lesion0)
@@ -171,7 +176,26 @@ def compute_abcde(rgb: np.ndarray) -> tuple[ABCDE, np.ndarray]:
     C = _color_variegation(rgb, blob)
     D = _diameter_px(blob)
     E = _elevation_satellite(blob)
-    return ABCDE(A, B, C, D, E), blob
+    
+    # Calculate center coordinates
+    ys, xs = np.where(blob > 0)
+    if len(xs) > 0:
+        center_x = float(np.mean(xs))
+        center_y = float(np.mean(ys))
+    else:
+        center_x = float(rgb.shape[1] / 2)
+        center_y = float(rgb.shape[0] / 2)
+    
+    return {
+        "asymmetry": float(A),
+        "border_irregularity": float(B),
+        "color_variegation": float(C),
+        "diameter_px": float(D),
+        "elevation_satellite": float(E),
+        "center_xy": [center_x, center_y],
+        "mask": blob,
+        "area_px": float(np.sum(blob > 0))
+    }
 
 
 # --------------------------- Attention/overlay ---------------------------
@@ -202,26 +226,61 @@ def _attention_map(rgb: np.ndarray, blob: np.ndarray) -> np.ndarray:
     return att.astype(np.float32)
 
 
-def save_overlay(rgb: np.ndarray, blob: np.ndarray, out_path: Path):
-    """Save lesion outline + attention heat overlay with a small footer watermark."""
+def save_overlay(rgb: np.ndarray, heatmap: Optional[np.ndarray], out_path: Path, plan_data: Optional[Dict] = None):
+    """Save lesion outline + attention heat overlay with surgical planning overlays.
+    
+    This is a compatibility function. For advanced heatmap generation, use gradcam.py
+    """
+    if heatmap is None:
+        # Use ABCDE-based attention map as fallback
+        abcde_data = compute_abcde(rgb)
+        blob = abcde_data.get("mask", np.zeros(rgb.shape[:2], dtype=np.uint8))
+        heatmap = _attention_map(rgb, blob)
+    
     vis = rgb.copy()
 
-    # draw lesion contour
-    cnts, _ = cv2.findContours(blob, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if cnts:
-        cv2.drawContours(vis, cnts, -1, (255, 0, 0), 2)
+    # Draw lesion contour if we have a binary mask
+    if heatmap is not None and len(np.unique(heatmap)) == 2:
+        # Binary mask case
+        blob = (heatmap > 0.5).astype(np.uint8) * 255
+        cnts, _ = cv2.findContours(blob, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        lesion_center = None
+        if cnts:
+            cv2.drawContours(vis, cnts, -1, (255, 0, 0), 2)
+            
+            # Calculate lesion center for surgical overlays
+            largest_contour = max(cnts, key=cv2.contourArea)
+            M = cv2.moments(largest_contour)
+            if M["m00"] != 0:
+                lesion_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        
+        # Use attention map for blending
+        att = _attention_map(rgb, blob)
+    else:
+        # Continuous heatmap case
+        att = heatmap.astype(np.float32)
+        if att.max() > 0:
+            att = att / att.max()
+        
+        # Find center from peak activation
+        peak_y, peak_x = np.unravel_index(np.argmax(att), att.shape)
+        lesion_center = (int(peak_x), int(peak_y))
 
-    # attention map
-    att = _attention_map(rgb, blob)
+    # Apply heatmap overlay
     heat = cv2.applyColorMap((att * 255).astype(np.uint8), cv2.COLORMAP_JET)
     band3 = np.dstack([att > 0] * 3).astype(np.uint8)
     blended = np.where(band3 > 0, (0.65 * vis + 0.35 * heat).astype(np.uint8), vis)
 
-    # feather edges
-    edge = cv2.dilate((blob > 0).astype(np.uint8), np.ones((3, 3), np.uint8), 1) - (blob > 0).astype(np.uint8)
+    # Feather edges
+    edge_mask = cv2.dilate((att > 0.1).astype(np.uint8), np.ones((3, 3), np.uint8), 1)
+    edge = edge_mask - (att > 0.1).astype(np.uint8)
     blended[edge > 0] = (0.5 * blended[edge > 0] + 0.5 * np.array([255, 255, 255])).astype(np.uint8)
 
-    # footer watermark
+    # Add surgical planning overlays if plan data provided
+    if plan_data and lesion_center:
+        blended = _add_surgical_overlays(blended, lesion_center, plan_data)
+
+    # Footer watermark
     h, w = blended.shape[:2]
     footer = "Developed by Dr. Mehdi Ghorbani"
     cv2.putText(blended, footer, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (240, 240, 240), 1, cv2.LINE_AA)
@@ -229,16 +288,239 @@ def save_overlay(rgb: np.ndarray, blob: np.ndarray, out_path: Path):
     Image.fromarray(blended).save(out_path)
 
 
-def dump_metrics(abcde: ABCDE, extras: dict, out_json: Path):
+def _add_surgical_overlays(img: np.ndarray, lesion_center: Tuple[int, int], plan_data: Dict) -> np.ndarray:
+    """Add RSTL lines and flap planning overlays to the image."""
+    overlay = img.copy()
+    h, w = overlay.shape[:2]
+    cx, cy = lesion_center
+    
+    # Extract planning data
+    detailed_plan = plan_data.get('detailed', {})
+    if not detailed_plan or detailed_plan.get('error'):
+        return overlay
+    
+    rstl_angle = detailed_plan.get('incision_orientation_deg')
+    candidates = detailed_plan.get('candidates', [])
+    
+    # 1. Draw RSTL orientation line (thin gold line)
+    if rstl_angle is not None:
+        # Convert angle to radians (0° = horizontal, 90° = vertical)
+        angle_rad = np.radians(rstl_angle)
+        
+        # Draw line through lesion center along RSTL
+        line_length = min(w, h) // 4
+        dx = int(line_length * np.cos(angle_rad))
+        dy = int(line_length * np.sin(angle_rad))
+        
+        # RSTL line in gold
+        cv2.line(overlay, 
+                (cx - dx, cy - dy), 
+                (cx + dx, cy + dy), 
+                (0, 215, 255),  # Gold color (BGR)
+                2)
+        
+        # Add RSTL label
+        label_x = cx + dx + 10
+        label_y = cy + dy
+        cv2.putText(overlay, f"RSTL {rstl_angle}°", 
+                   (label_x, label_y), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 
+                   0.4, (0, 215, 255), 1, cv2.LINE_AA)
+    
+    # 2. Draw flap design hints for top candidate
+    if candidates:
+        top_candidate = candidates[0]
+        flap_type = top_candidate.get('flap', '')
+        
+        # Different overlay patterns for different flap types
+        if 'bilobed' in flap_type.lower():
+            _draw_bilobed_overlay(overlay, lesion_center, top_candidate)
+        elif 'rotation' in flap_type.lower() or 'mustarde' in flap_type.lower():
+            _draw_rotation_overlay(overlay, lesion_center, top_candidate)
+        elif 'advancement' in flap_type.lower():
+            _draw_advancement_overlay(overlay, lesion_center, top_candidate, rstl_angle)
+        elif 'forehead' in flap_type.lower():
+            _draw_forehead_flap_overlay(overlay, lesion_center, top_candidate)
+    
+    # 3. Add legend for surgical overlays
+    _add_surgical_legend(overlay)
+    
+    return overlay
+
+
+def _draw_bilobed_overlay(img: np.ndarray, center: Tuple[int, int], candidate: Dict):
+    """Draw bilobed flap design overlay."""
+    cx, cy = center
+    
+    # Get bilobed parameters from candidate data
+    vector_data = candidate.get('vector', {})
+    total_arc = vector_data.get('total_arc_max', 100)
+    lobe1_angle = vector_data.get('lobe1_deg', 45)
+    lobe2_angle = vector_data.get('lobe2_deg', 45)
+    
+    # Estimate defect size and flap proportions
+    radius = 30  # Base radius for visualization
+    
+    # Draw defect circle
+    cv2.circle(img, center, radius, (0, 0, 255), 2)  # Red for defect
+    
+    # Draw first lobe (60% of defect size)
+    lobe1_center = (cx + int(radius * 1.5 * np.cos(np.radians(lobe1_angle))),
+                   cy + int(radius * 1.5 * np.sin(np.radians(lobe1_angle))))
+    cv2.circle(img, lobe1_center, int(radius * 0.6), (255, 165, 0), 2)  # Orange
+    
+    # Draw second lobe (50% of first lobe)
+    total_angle = lobe1_angle + lobe2_angle
+    lobe2_center = (cx + int(radius * 2.2 * np.cos(np.radians(total_angle))),
+                   cy + int(radius * 2.2 * np.sin(np.radians(total_angle))))
+    cv2.circle(img, lobe2_center, int(radius * 0.3), (255, 165, 0), 2)  # Orange
+    
+    # Draw connecting arcs
+    cv2.line(img, center, lobe1_center, (255, 165, 0), 1)
+    cv2.line(img, lobe1_center, lobe2_center, (255, 165, 0), 1)
+    
+    # Add label
+    cv2.putText(img, "Bilobed", (cx + 40, cy - 40), 
+               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 165, 0), 1, cv2.LINE_AA)
+
+
+def _draw_rotation_overlay(img: np.ndarray, center: Tuple[int, int], candidate: Dict):
+    """Draw rotation flap design overlay."""
+    cx, cy = center
+    radius = 40
+    
+    # Draw defect
+    cv2.circle(img, center, radius, (0, 0, 255), 2)
+    
+    # Draw rotation arc (lateral to medial)
+    arc_start = (cx + radius * 2, cy - radius)
+    arc_end = (cx - radius, cy + radius)
+    
+    # Draw curved line to represent rotation
+    points = []
+    for t in np.linspace(0, 1, 20):
+        # Bezier-like curve
+        x = int(arc_start[0] * (1-t) + arc_end[0] * t + radius * np.sin(t * np.pi))
+        y = int(arc_start[1] * (1-t) + arc_end[1] * t)
+        points.append((x, y))
+    
+    for i in range(len(points) - 1):
+        cv2.line(img, points[i], points[i+1], (0, 255, 0), 2)  # Green
+    
+    # Arrow to show direction
+    cv2.arrowedLine(img, (cx + radius * 2, cy), (cx + radius, cy), (0, 255, 0), 2)
+    
+    cv2.putText(img, "Rotation", (cx + 50, cy), 
+               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1, cv2.LINE_AA)
+
+
+def _draw_advancement_overlay(img: np.ndarray, center: Tuple[int, int], candidate: Dict, rstl_angle: Optional[float]):
+    """Draw advancement flap overlay."""
+    cx, cy = center
+    radius = 35
+    
+    # Draw defect
+    cv2.circle(img, center, radius, (0, 0, 255), 2)
+    
+    # Draw advancement direction (along RSTL if available)
+    if rstl_angle is not None:
+        angle_rad = np.radians(rstl_angle)
+        advance_start = (cx - int(radius * 2 * np.cos(angle_rad)),
+                        cy - int(radius * 2 * np.sin(angle_rad)))
+        
+        # Draw advancement arrow
+        cv2.arrowedLine(img, advance_start, center, (0, 255, 255), 2)  # Cyan
+        
+        # Draw Burow triangles
+        triangle_offset = radius * 1.5
+        triangle1 = (cx - int(triangle_offset * np.cos(angle_rad + np.pi/2)),
+                    cy - int(triangle_offset * np.sin(angle_rad + np.pi/2)))
+        triangle2 = (cx - int(triangle_offset * np.cos(angle_rad - np.pi/2)),
+                    cy - int(triangle_offset * np.sin(angle_rad - np.pi/2)))
+        
+        # Small triangles for Burow excisions
+        for triangle in [triangle1, triangle2]:
+            pts = np.array([triangle, 
+                           (triangle[0] + 10, triangle[1] + 10),
+                           (triangle[0] - 10, triangle[1] + 10)], np.int32)
+            cv2.drawContours(img, [pts], 0, (0, 255, 255), 1)
+    
+    cv2.putText(img, "Advancement", (cx + 40, cy + 20), 
+               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1, cv2.LINE_AA)
+
+
+def _draw_forehead_flap_overlay(img: np.ndarray, center: Tuple[int, int], candidate: Dict):
+    """Draw paramedian forehead flap overlay."""
+    cx, cy = center
+    
+    # Draw nasal defect
+    cv2.circle(img, center, 25, (0, 0, 255), 2)
+    
+    # Draw pedicle line toward forehead (simplified)
+    pedicle_end = (cx - 20, cy - 80)  # Approximate supratrochlear location
+    cv2.line(img, center, pedicle_end, (255, 0, 255), 3)  # Magenta
+    
+    # Draw forehead donor area (rectangular approximation)
+    donor_rect = (pedicle_end[0] - 30, pedicle_end[1] - 40, 60, 80)
+    cv2.rectangle(img, 
+                 (donor_rect[0], donor_rect[1]), 
+                 (donor_rect[0] + donor_rect[2], donor_rect[1] + donor_rect[3]), 
+                 (255, 0, 255), 2)
+    
+    cv2.putText(img, "Forehead Flap", (cx + 30, cy - 50), 
+               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 255), 1, cv2.LINE_AA)
+    cv2.putText(img, "2-Stage", (cx + 30, cy - 35), 
+               cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 0, 255), 1, cv2.LINE_AA)
+
+
+def _add_surgical_legend(img: np.ndarray):
+    """Add legend for surgical overlay colors."""
+    h, w = img.shape[:2]
+    
+    # Legend background
+    legend_w, legend_h = 200, 100
+    legend_x, legend_y = w - legend_w - 10, 10
+    
+    # Semi-transparent background
+    overlay = img.copy()
+    cv2.rectangle(overlay, (legend_x, legend_y), (legend_x + legend_w, legend_y + legend_h), 
+                 (50, 50, 50), -1)
+    cv2.addWeighted(overlay, 0.7, img, 0.3, 0, img)
+    
+    # Legend text
+    legend_items = [
+        ("RSTL Lines", (0, 215, 255)),      # Gold
+        ("Defect", (0, 0, 255)),            # Red  
+        ("Flap Design", (255, 165, 0)),     # Orange
+        ("Rotation", (0, 255, 0)),          # Green
+        ("Advancement", (0, 255, 255))      # Cyan
+    ]
+    
+    for i, (label, color) in enumerate(legend_items):
+        y_pos = legend_y + 15 + i * 15
+        cv2.circle(img, (legend_x + 10, y_pos), 3, color, -1)
+        cv2.putText(img, label, (legend_x + 20, y_pos + 3), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 1, cv2.LINE_AA)
+
+
+def dump_metrics(
+    out_json: Path,
+    img_path: str,
+    mm_per_px: Optional[float],
+    metrics_px: Dict[str, Any],
+    metrics_mm: Optional[Dict[str, Any]],
+    abcde: Dict[str, Any]
+):
+    """Save comprehensive metrics to JSON file."""
     payload = {
-        "asymmetry": abcde.asymmetry,
-        "border_irregularity": abcde.border_irregularity,
-        "color_variegation": abcde.color_variegation,
-        "diameter_px": abcde.diameter_px,
-        "elevation_satellite": abcde.elevation_satellite,
-        **extras,
+        "source_image": img_path,
+        "scale_mm_per_px": mm_per_px,
+        "metrics_px": metrics_px,
+        "metrics_mm": metrics_mm,
+        "abcde_features": abcde,
+        "timestamp": str(datetime.now().isoformat())
     }
-    out_json.write_text(json.dumps(payload, indent=2))
+    out_json.write_text(json.dumps(payload, indent=2, default=str))
 
 
 # ------------------------ Scale estimation helpers -----------------------
@@ -254,56 +536,58 @@ IPD_MM_DEFAULT = 63.0       # adult interpupillary distance (mean)
 WTW_MM_DEFAULT = 11.7       # white-to-white corneal diameter (mean)
 
 
-def estimate_scale(
-    landmarks: Dict[str, Tuple[float, float]],
-    manual_mm_per_px: Optional[float] = None,
-    ipd_mm: float = IPD_MM_DEFAULT,
-    wtw_mm: float = WTW_MM_DEFAULT,
-) -> ScaleEstimate:
-    """
-    landmarks: {"left_pupil": (x,y), "right_pupil": (x,y),
-                "left_wtw_a": (x,y), "left_wtw_b": (x,y),
-                "right_wtw_a": (x,y), "right_wtw_b": (x,y)}
-    Order of preference: IPD -> WTW -> manual -> unknown(None)
-    """
-    import math
-
-    # IPD
-    lp, rp = landmarks.get("left_pupil"), landmarks.get("right_pupil")
-    if lp and rp:
-        dx, dy = rp[0] - lp[0], rp[1] - lp[1]
-        px_ipd = math.hypot(dx, dy)
-        if px_ipd > 2.0:
-            return ScaleEstimate(ipd_mm / px_ipd, "ipd", {"px_ipd": px_ipd, "ipd_mm": ipd_mm})
-
-    # WTW (avg of available eyes)
-    l_a, l_b = landmarks.get("left_wtw_a"), landmarks.get("left_wtw_b")
-    r_a, r_b = landmarks.get("right_wtw_a"), landmarks.get("right_wtw_b")
-
-    def seg_len(a, b): return math.hypot(b[0] - a[0], b[1] - a[1])
-    wtw_px = []
-    if l_a and l_b: wtw_px.append(seg_len(l_a, l_b))
-    if r_a and r_b: wtw_px.append(seg_len(r_a, r_b))
-    if wtw_px:
-        px_wtw = sum(wtw_px) / len(wtw_px)
-        if px_wtw > 2.0:
-            return ScaleEstimate(wtw_mm / px_wtw, "wtw", {"px_wtw": px_wtw, "wtw_mm": wtw_mm})
-
-    # Manual
-    if manual_mm_per_px and manual_mm_per_px > 0:
-        return ScaleEstimate(manual_mm_per_px, "manual", {})
-
-    return ScaleEstimate(None, "unknown", {})
+def estimate_scale(rgb: np.ndarray) -> Optional[float]:
+    """Estimate mm per pixel scale from face image (placeholder implementation)."""
+    # This is a simplified version that returns a reasonable default
+    # In practice, this would use face detection/landmark detection
+    # For now, assume typical smartphone photo scale
+    h, w = rgb.shape[:2]
+    
+    # Rough heuristic: assume image width represents ~10-15cm face width
+    estimated_face_width_mm = 120  # mm
+    estimated_mm_per_px = estimated_face_width_mm / w
+    
+    # Clamp to reasonable bounds
+    if 0.01 <= estimated_mm_per_px <= 0.5:
+        return estimated_mm_per_px
+    return None
+def estimate_scale(rgb: np.ndarray) -> Optional[float]:
+    """Estimate mm per pixel scale from face image (placeholder implementation)."""
+    # This is a simplified version that returns a reasonable default
+    # In practice, this would use face detection/landmark detection
+    # For now, assume typical smartphone photo scale
+    h, w = rgb.shape[:2]
+    
+    # Rough heuristic: assume image width represents ~10-15cm face width
+    estimated_face_width_mm = 120  # mm
+    estimated_mm_per_px = estimated_face_width_mm / w
+    
+    # Clamp to reasonable bounds
+    if 0.01 <= estimated_mm_per_px <= 0.5:
+        return estimated_mm_per_px
+    return None
 
 
 def defect_metrics_px_to_mm(
-    px_area: Optional[float],
-    px_equiv_diam: Optional[float],
-    mm_per_px: Optional[float],
-) -> Dict[str, Optional[float]]:
-    """Convert pixel area/diameter to mm values using the provided scale."""
-    if not mm_per_px:
-        return {"area_mm2": None, "equiv_diam_mm": None}
-    area_mm2 = (px_area * (mm_per_px ** 2)) if px_area is not None else None
-    diam_mm = (px_equiv_diam * mm_per_px) if px_equiv_diam is not None else None
-    return {"area_mm2": area_mm2, "equiv_diam_mm": diam_mm}
+    metrics_px: Dict[str, Any],
+    mm_per_px: Optional[float]
+) -> Optional[Dict[str, Any]]:
+    """Convert pixel metrics to mm using the scale factor."""
+    if not mm_per_px or not metrics_px:
+        return None
+        
+    metrics_mm = {}
+    
+    # Convert diameter
+    if "diameter_px" in metrics_px and metrics_px["diameter_px"]:
+        metrics_mm["diameter_mm"] = float(metrics_px["diameter_px"] * mm_per_px)
+    
+    # Convert area if available
+    if "area_px" in metrics_px and metrics_px["area_px"]:
+        metrics_mm["area_mm2"] = float(metrics_px["area_px"] * (mm_per_px ** 2))
+    
+    # Keep center coordinates in pixels (no conversion needed)
+    if "center_xy" in metrics_px:
+        metrics_mm["center_xy"] = metrics_px["center_xy"]
+    
+    return metrics_mm

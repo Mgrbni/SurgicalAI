@@ -1,0 +1,40 @@
+@page {
+  size: A4;
+  margin: 18mm 16mm 20mm 16mm;
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); }
+}
+* { box-sizing: border-box; }
+html, body { background: #fff; color: #111; font: 12pt/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+h1 { font-size: 18pt; margin: 0 0 8pt; }
+h2 { font-size: 14pt; margin: 0 0 6pt; }
+p, li, td, th { font-size: 11pt; }
+header.header { border-bottom: 2px solid #eee; padding-bottom: 8pt; margin-bottom: 10pt; }
+.header .brand { display: flex; justify-content: space-between; align-items: baseline; }
+.header .logo { font-weight: 700; letter-spacing: .3px; }
+.header .meta { color: #555; font-size: 9.5pt; }
+.ribbon { margin-top: 6pt; padding: 6pt 8pt; background: #222; color: #fff; font-weight: 600; text-align: center; border-radius: 4pt; }
+
+section { margin: 12pt 0 14pt; page-break-inside: avoid; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10pt; }
+.kv { width: 100%; border-collapse: collapse; }
+.kv th, .kv td { padding: 6pt 8pt; border-bottom: 1px solid #eee; text-align: left; }
+.kv th { width: 38%; color: #333; }
+
+ul.bars { list-style: none; padding: 0; margin: 0; }
+ul.bars li { display: grid; grid-template-columns: 110px 1fr 60px; gap: 8pt; align-items: center; margin: 5pt 0; }
+.bar { width: 100%; height: 10pt; background: #f0f0f0; border-radius: 6pt; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: #0a7; }
+.val { text-align: right; font-variant-numeric: tabular-nums; }
+
+.chip { display: inline-block; padding: 4pt 8pt; border-radius: 999px; font-weight: 700; font-size: 10pt; }
+.chip.ok { background: #e8f7ef; color: #0a7; border: 1px solid #bfe8d4; }
+.chip.defer { background: #fff0e6; color: #d9480f; border: 1px solid #ffd6bf; }
+.chip.uncertain { background: #eef2ff; color: #3b5bdb; border: 1px solid #dbe0ff; }
+.reason, .guidance { margin: 6pt 0 0; color: #222; }
+
+figure { margin: 0; }
+img { display: block; width: 100%; max-width: 100%; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4pt; }
+figcaption { text-align: center; margin-top: 4pt; font-size: 9.5pt; color: #444; }
+
+footer.footer { margin-top: 14pt; border-top: 1px solid #eee; padding-top: 8pt; font-size: 9.5pt; color: #444; }

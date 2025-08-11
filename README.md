@@ -1,17 +1,134 @@
-# SurgicalAI — Photo-Only Surgical Planning
+# SurgicalAI Demo (Grad‑CAM Alignment + Vision‑LLM Fusion)
 
-FastAPI server + tiny static client using OpenAI **Responses API** with **Structured Outputs** and streaming. Keys stay server‑side. Retries/backoff + token caps protect demo day.
+> NOT FOR CLINICAL USE – Research / demonstration only.
 
-## Quickstart (Photo-Only)
+This demo shows:
+1. Exact inverse-mapped Grad‑CAM overlays (model space → original pixels) with ROI zoom.
+2. Vision‑LLM Observer (OpenAI / Anthropic) returning structured JSON (no prose).
+3. Neuro‑symbolic fusion boosting seborrheic keratosis (SK) when hallmark descriptors present.
+4. PDF report with zoom + full overlays, observer & fusion summary tables.
 
-```bash
-python -m venv .venv && .venv\Scripts\activate    # Windows
-pip install -e .
-pip install fastapi uvicorn[standard] python-multipart
-python -m uvicorn server.http_api:app --reload --port 8000
+## Quickstart
+
+```powershell
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install -e .[dev]
+
+# Run demo pipeline on sample image
+python -m surgicalai_demo.pipeline --image data/samples/lesion.jpg --out runs/demo
+
+# Or use Makefile shortcut (if make installed)
+make demo
+
+# Launch API server (simple)
+python -m uvicorn server.api_simple:app --reload --port 8000
 ```
 
-Open http://localhost:8000 to use the client UI.
+Open http://localhost:8000 and upload a lesion image. The client shows:
+* ROI zoom overlay (switchable to full overlay)
+* Observer (Vision‑LLM) descriptors & recommendation
+* Fusion notes and top‑3 probabilities
+* Downloadable PDF artifact
+
+## Environment Variables
+
+Set one provider (default openai):
+```powershell
+$env:VLM_PROVIDER = "openai"        # or "anthropic"
+$env:OPENAI_API_KEY = "sk-..."      # if openai
+$env:ANTHROPIC_API_KEY = "..."      # if anthropic
+```
+
+Optional:
+```powershell
+$env:OPENAI_MODEL = "gpt-4o-mini"
+$env:ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
+```
+
+## Features Implemented
+
+| Feature | Status |
+|---------|--------|
+| Grad‑CAM model→original exact warp | ✅ |
+| ROI detection + zoom overlay | ✅ |
+| Contours (0.3/0.5/0.7) + crosshair | ✅ |
+| Observer JSON (primary_pattern, likelihoods, descriptors, ABCD, recommendation) | ✅ |
+| Fusion: descriptor boosting & weighted blend | ✅ |
+| PDF with observer + fusion tables | ✅ |
+| API /api/analyze enriched response | ✅ |
+| Unit tests: warp (<1px), overlay size, SK boost | ✅ |
+
+## /api/analyze Response (excerpt)
+```json
+{
+  "observer": {
+    "primary_pattern": "seborrheic_keratosis",
+    "likelihoods": {"seborrheic_keratosis": 0.42, ...},
+    "descriptors": ["stuck-on appearance","waxy surface"],
+    "abcd_estimate": {"asymmetry":"low","border":"sharp",...},
+    "recommendation": "observe"
+  },
+  "fusion": {
+    "top3": [["seborrheic_keratosis",0.31],["nevus",0.29],["scc",0.21]],
+    "notes": "Boosted SK due to 'stuck-on','waxy' cues."
+  },
+  "artifacts": {
+    "overlay_full": "/api/artifact/<run>/overlay_full.png",
+    "overlay_zoom": "/api/artifact/<run>/overlay_zoom.png",
+    "pdf": "/api/artifact/<run>/report.pdf"
+  }
+}
+```
+
+## Running Tests
+```powershell
+pytest -q
+```
+
+## Acceptance Checks
+1. Cheek SK image: zoom overlay centered; contours align (no drift).  
+2. Observer descriptors include ≥2 SK hallmarks → Fusion boosts SK probability.  
+3. PDF shows zoom + full overlays, observer + fusion tables, disclaimer.  
+4. Unit tests pass.
+
+## Legacy Notes
+## Fusion Logic Details
+
+Fusion steps (`surgicalai_demo/fusion.py`):
+1. Normalize CNN softmax outputs to probabilities.
+2. Normalize VLM likelihoods → probabilities.
+3. Descriptor rules:
+  - If ≥2 SK descriptors among {stuck-on appearance, waxy surface, sharply demarcated, milia-like cysts, comedo-like openings} → +sk_descriptor_bonus to SK, small melanoma reduction (30% of bonus).
+  - Melanoma descriptors (e.g., irregular pigment network, ulceration) → +melanoma_descriptor_bonus.
+  - Similar optional boosts for BCC / SCC descriptor clusters.
+4. Renormalize adjusted VLM probabilities.
+5. Weighted blend: final = cnn_weight * cnn + vlm_weight * vlm_adjusted (weights auto-normalized).
+6. Rank top‑k and apply gate logic (tie if top1-top2 ≤ tie_margin → UNCERTAIN).
+7. Compile explanatory notes summarizing descriptor impacts + uncertainty.
+
+Rationale: Keep CNN as primary signal (default 70%) while allowing structured visual cues to rectify systematic under-calling (SK) and elevate concerning melanoma patterns.
+Older structured LLM endpoints retained (see `server/http_api.py`). New vision fusion path lives in `api_simple.py` (and mirrored in `api_advanced.py`).
+
+---
+## Dev Tasks
+Format / lint:
+```powershell
+ruff check .
+mypy surgicalai_demo
+```
+Type improvements and more robust model hooks are welcome.
+
+---
+## Checklist
+- [ ] Set API key(s) & provider env vars
+- [ ] Run pipeline / API
+- [ ] Inspect overlays & PDF
+- [ ] Review observer JSON & fusion notes
+
+"Not for clinical use" is embedded in overlays & PDF.
+
+# END README
 
 ## Installation
 

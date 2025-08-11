@@ -1,0 +1,97 @@
+"""
+Evidence-based (condensed) surgical management guidelines for common cutaneous lesions.
+
+Sources synthesized (2024-2025): NCCN, AAD, BAD, ESMO public summaries & widely cited reviews.
+Structured for decision-support demo ONLY — NOT FOR CLINICAL USE.
+"""
+
+melanoma:
+  summary: >-
+    Melanoma management depends on Breslow thickness, ulceration, and anatomic constraints.
+    Sentinel node biopsy (SNB) considered ≥0.8 mm with additional risk features. Margins constrained
+    by critical facial subunits may require staged excision or margin-controlled techniques.
+  margins:
+    in_situ: "5 mm (0.5 cm) circumferential"
+    breslow_<1mm: "1 cm"
+    breslow_1_2mm: "1–2 cm (commonly 1 cm if function/aesthetics important)"
+    breslow_>2mm: "2 cm (where anatomically feasible)"
+  reconstruction:
+    primary_closure: "Feasible for small defects (<1 cm) on convex surfaces (forehead, cheek)."
+    elliptical_excision: "Standard 3:1 length:width, oriented parallel to relaxed skin tension lines (RSTL)."
+    rotational_flap: "Useful for larger cheek / temple defects preserving eyelid & nasal units; pivot outside cosmetic unit when possible."
+    advancement_flap: "Consider A-to-T or U advancement for forehead or scalp anterior lesions; maintain brow position."
+  notes:
+    - "Stage with clinical exam ± imaging per risk factors." 
+    - "Avoid undermining before confirming clear margins when feasible."
+
+bcc:
+  summary: >-
+    Basal cell carcinoma risk stratified by histologic subtype, size, location, borders, recurrence.
+    High-risk and cosmetically sensitive site lesions benefit from Mohs micrographic surgery (MMS).
+  risk_categories:
+    low: "<2 cm trunk/extremities, nodular, well-defined, primary"
+    high: ">=2 cm trunk/extremities OR any high-risk site (central face, eyelids, nose, lips, ears) OR aggressive histology OR recurrent"
+  margins:
+    low_risk: "4 mm clinical margin typically clears ~95%"
+    high_risk: "Mohs micrographic surgery preferred; else 5–10 mm based on subtype"
+  reconstruction:
+    primary_closure: "Often achievable for small low-risk lesions after elliptical excision."
+    mohs_defect: "Plan reconstruction AFTER histologic clearance; consider bilobed (nasal tip), dorsal nasal (Rieger) flap, nasolabial interpolation for alar defects."
+    rotational_flap: "O-to-Z or cervicofacial rotation for large cheek / temple defects." 
+    advancement_flap: "A-to-T on forehead, island pedicle V-Y for nasal ala / medial canthus in select cases."
+  notes:
+    - "Counsel on field cancerization / future surveillance."
+    - "Photoprotection reinforcement."
+
+scc:
+  summary: >-
+    Cutaneous squamous cell carcinoma risk stratification (size, depth, differentiation, perineural invasion, location)
+    guides margin width and need for Mohs or staged excision. High-risk lesions: consider MMS.
+  margins:
+    low_risk: "4–6 mm (≥95% clearance)"
+    high_risk: "Mohs micrographic surgery OR 6–10 mm if standard excision used"
+    in_situ (Bowen): "5 mm (or field therapy adjunct)"
+  reconstruction:
+    primary_closure: "Small, superficial defects with laxity (lateral cheek, temple)."
+    rotational_flap: "Large cheek / scalp defects; maintain hairline geometry." 
+    advancement_flap: "Paramedian forehead flap rarely for SCC unless nasal subunits involved post-clearance."
+    graft: "Consider full-thickness graft for ear / nasal sidewall when flap distortion risk high."
+  notes:
+    - "Evaluate regional nodes in high-risk tumors." 
+    - "Perineural symptoms warrant imaging." 
+
+seborrheic_keratosis:
+  summary: >-
+    Benign epidermal proliferation. Excision only if symptomatic, irritated, or for diagnostic uncertainty.
+  margins:
+    standard: "Shave removal or curettage with minimal margin (<1 mm)."
+  reconstruction:
+    primary_closure: "Usually not required; superficial removal heals by secondary intention."
+    elliptical_excision: "Only if atypical features raise melanoma / SCC concern."
+  notes:
+    - "Document atypical pigmentation or irritation if present." 
+
+nevus:
+  summary: >-
+    Melanocytic nevus removal indications: atypia, irritation, cosmetic, or change. Dysplastic nevi may warrant 2–5 mm margin depending on degree.
+  margins:
+    benign: "Shave or fusiform 1–2 mm margin"
+    dysplastic_mild: "2 mm"
+    dysplastic_moderate: "2–5 mm (clinical judgment)"
+    dysplastic_severe: "5 mm and ensure complete histologic assessment"
+  reconstruction:
+    primary_closure: "Standard for fusiform excisions <2 cm."
+    advancement_flap: "Consider when cosmetic subunits (nose, lip) would distort with linear closure."
+  notes:
+    - "Photographic surveillance for multiple atypical nevi." 
+
+benign_other:
+  summary: >-
+    Catch‑all for benign adnexal / vascular / inflammatory mimickers. Management tailored to pathology.
+  margins:
+    standard: "Conservative excision or observation"
+  reconstruction:
+    primary_closure: "Most small excisions."
+    rotational_flap: "Rare — only for large symptomatic lesions after confirmation."
+  notes:
+    - "Confirm benign nature histologically before complex reconstruction." 

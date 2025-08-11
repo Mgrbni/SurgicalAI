@@ -8,6 +8,7 @@ from PIL import Image
 
 from surgicalai.io.dermatology_loader import load_derm_image
 from surgicalai.io.polycam_loader import load_mesh
+from server.settings import SETTINGS  # reuse settings for mode flags
 from surgicalai.vision.models import load_model, predict
 from surgicalai.vision.gradcam import compute_gradcam
 from surgicalai.cognition.guidelines import load_rules, query_rules
@@ -37,7 +38,12 @@ def run_demo_ui(job_dir: Path, args: Dict[str, Any]) -> Dict[str, Any]:
     # 1. Load inputs
     img_rgb = load_derm_image(args["image_path"])
     
-    mesh_data = None  # 3D disabled
+    mesh_data = None
+    if SETTINGS.polycam_mode and args.get("mesh_path"):
+        try:
+            mesh_data = load_mesh(args["mesh_path"])  # currently stub returns None
+        except Exception:
+            mesh_data = None
     
     # 2. Run vision model
     model = load_model()

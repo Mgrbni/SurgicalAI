@@ -180,25 +180,72 @@ document.addEventListener('DOMContentLoaded', function() {
     progressSteps.style.display = 'none';
     resultsPanel.style.display = 'block';
 
-    // Probabilities table
+    // Probabilities table - handle both legacy and new format
     let probsHTML = '<tr><th>Class</th><th>Probability</th></tr>';
-    for (const [className, prob] of Object.entries(data.class_probs)) {
-      probsHTML += `<tr><td>${className}</td><td>${(prob * 100).toFixed(1)}%</td></tr>`;
-    }
+    const probs = data.probs || data.class_probs || data.lesion_probs || {};
+    
+    // Convert to array and sort by probability
+    const probArray = Object.entries(probs).sort((a, b) => b[1] - a[1]);
+    
+    probArray.forEach(([className, prob]) => {
+      const displayName = className.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const percentage = typeof prob === 'number' ? (prob * 100).toFixed(1) : 'N/A';
+      const barWidth = typeof prob === 'number' ? (prob * 100) : 0;
+      
+      probsHTML += `
+        <tr>
+          <td>${displayName}</td>
+          <td>
+            <div class="prob-bar-container">
+              <div class="prob-bar" style="width: ${barWidth}%"></div>
+              <span class="prob-text">${percentage}%</span>
+            </div>
+          </td>
+        </tr>`;
+    });
     probabilitiesTable.innerHTML = probsHTML;
 
-    // Gate decision
-    const gateStatus = data.gate.proceed ? 'Proceed' : 'Defer';
-    const gateColor = data.gate.proceed ? 'green' : 'red';
-    gateDecision.innerHTML = `<span class="pill ${gateColor}">${gateStatus}</span> ${data.gate.reason || ''}`;
+    // Enhanced gate decision
+    const gateStatus = data.gate?.status || (data.gate?.proceed ? 'Proceed' : 'Defer');
+    const gateNotes = data.gate?.notes || data.gate?.reason || '';
+    const allowFlap = data.gate?.allow_flap !== undefined ? data.gate.allow_flap : data.gate?.proceed;
+    
+    let gateColor = 'gray';
+    if (gateStatus.includes('RED') || gateStatus.includes('urgent')) gateColor = 'red';
+    else if (gateStatus.includes('ORANGE') || gateStatus.includes('likely')) gateColor = 'orange';
+    else if (gateStatus.includes('YELLOW') || gateStatus.includes('possible')) gateColor = 'yellow';
+    else if (gateStatus.includes('GREEN') || allowFlap) gateColor = 'green';
+    else if (gateStatus.includes('UNCERTAIN')) gateColor = 'purple';
+    
+    gateDecision.innerHTML = `
+      <div class="gate-decision">
+        <span class="pill ${gateColor}">${gateStatus}</span>
+        ${gateNotes ? `<p class="gate-notes">${gateNotes}</p>` : ''}
+      </div>`;
 
-    // Flap suggestions
+    // Display VLM Observer information if available
+    if (data.observer) {
+      displayObserverInfo(data.observer);
+    }
+
+    // Display fusion information if available
+    if (data.fusion) {
+      displayFusionInfo(data.fusion);
+    }
+
+    // Display top-3 predictions if available
+    if (data.top3 && data.top3.length > 0) {
+      displayTop3Predictions(data.top3);
+    }
+
+    // Flap suggestions - handle multiple formats
     flapSuggestions.innerHTML = '';
-    if (data.flap_suggestions && data.flap_suggestions.length) {
-      data.flap_suggestions.forEach(flap => {
+    const flaps = data.flap_suggestions || data.plan?.candidates || [];
+    if (flaps && flaps.length) {
+      flaps.forEach(flap => {
         const chip = document.createElement('span');
         chip.className = 'chip';
-        chip.textContent = flap;
+        chip.textContent = typeof flap === 'string' ? flap : flap.flap || flap.name || 'Unknown';
         flapSuggestions.appendChild(chip);
       });
     } else {
@@ -207,11 +254,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Risk notes
     riskNotes.innerHTML = '';
-    if (data.risk_notes && data.risk_notes.length) {
+    const notes = data.risk_notes || data.plan?.danger || [];
+    if (notes && notes.length) {
       const ul = document.createElement('ul');
-      data.risk_notes.forEach(note => {
+      notes.forEach(note => {
         const li = document.createElement('li');
-        li.textContent = note;
+        li.textContent = typeof note === 'string' ? note : note.message || note;
         ul.appendChild(li);
       });
       riskNotes.appendChild(ul);
@@ -219,35 +267,253 @@ document.addEventListener('DOMContentLoaded', function() {
       riskNotes.textContent = 'No risk notes available.';
     }
 
-    // Artifacts
-    if (data.artifacts) {
-      artifacts.innerHTML = `
-        <div class="thumbnails">
-          <img src="/api/artifact/${data.artifacts.overlay_png.split('/').pop()}" alt="Overlay" class="thumbnail" />
-          <img src="/api/artifact/${data.artifacts.heatmap_png.split('/').pop()}" alt="Heatmap" class="thumbnail" />
-          <img src="/api/artifact/${data.artifacts.guideline_card_png.split('/').pop()}" alt="Guidelines" class="thumbnail" />
-        </div>
-        <div class="downloads">
-          <a href="/api/artifact/${data.artifacts.report_pdf.split('/').pop()}" class="button" download>Download PDF</a>
-          <a href="/api/artifact/${data.artifacts.report_json.split('/').pop()}" class="button" download>Download JSON</a>
-        </div>
-      `;
-    }
-
-    // Citations
-    if (data.citations_expanded) {
-      const citationsEl = document.getElementById('citations');
-      citationsEl.innerHTML = '<h3>Citations</h3><ul>';
-      
-      data.citations_expanded.forEach(citation => {
-        citationsEl.innerHTML += `<li>${citation}</li>`;
-      });
-      
-      citationsEl.innerHTML += '</ul>';
-    }
+    // Enhanced artifacts display
+    displayArtifacts(data.artifacts);
   }
 
-  // Initialize
+  function displayObserverInfo(observer) {
+    // Create observer info section if it doesn't exist
+    let observerSection = document.getElementById('observerInfo');
+    if (!observerSection) {
+      observerSection = document.createElement('div');
+      observerSection.id = 'observerInfo';
+      observerSection.className = 'info-section';
+      resultsPanel.insertBefore(observerSection, artifacts);
+    }
+
+    const primaryPattern = observer.primary_pattern ? 
+      observer.primary_pattern.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown';
+    
+    const descriptors = observer.descriptors || [];
+    const recommendation = observer.recommendation || 'None';
+    const abcd = observer.abcd_estimate || {};
+
+    observerSection.innerHTML = `
+      <h3>🔍 Vision-LLM Observer</h3>
+      <div class="observer-content">
+        <div class="observer-primary">
+          <strong>Primary Pattern:</strong> ${primaryPattern}
+        </div>
+        <div class="observer-descriptors">
+          <strong>Key Descriptors:</strong>
+          ${descriptors.length > 0 ? 
+            descriptors.map(d => `<span class="descriptor-tag">${d}</span>`).join(' ') :
+            '<span class="no-data">None identified</span>'
+          }
+        </div>
+        <div class="observer-recommendation">
+          <strong>Recommendation:</strong> <span class="pill ${getRecommendationColor(recommendation)}">${recommendation}</span>
+        </div>
+        ${abcd.asymmetry ? `
+          <div class="abcd-summary">
+            <strong>ABCD Assessment:</strong>
+            A=${abcd.asymmetry}, B=${abcd.border}, C=${abcd.color}, D=${abcd.diameter_mm || '?'}mm
+          </div>
+        ` : ''}
+      </div>`;
+  }
+
+  function displayFusionInfo(fusion) {
+    // Create fusion info section if it doesn't exist
+    let fusionSection = document.getElementById('fusionInfo');
+    if (!fusionSection) {
+      fusionSection = document.createElement('div');
+      fusionSection.id = 'fusionInfo';
+      fusionSection.className = 'info-section';
+      resultsPanel.insertBefore(fusionSection, artifacts);
+    }
+
+    const notes = fusion.notes || '';
+    const descriptors = fusion.vlm_descriptors || [];
+    const cnnWeight = fusion.cnn_weight || 0.7;
+    const vlmWeight = fusion.vlm_weight || 0.3;
+
+    fusionSection.innerHTML = `
+      <h3>🧠 Neuro-Symbolic Fusion</h3>
+      <div class="fusion-content">
+        <div class="fusion-weights">
+          <span class="weight-indicator">CNN: ${(cnnWeight * 100).toFixed(0)}%</span>
+          <span class="weight-indicator">VLM: ${(vlmWeight * 100).toFixed(0)}%</span>
+        </div>
+        ${notes ? `<div class="fusion-notes">${notes}</div>` : ''}
+        ${descriptors.length > 0 ? `
+          <div class="fusion-descriptors">
+            <strong>Contributing Descriptors:</strong>
+            ${descriptors.map(d => `<span class="descriptor-tag">${d}</span>`).join(' ')}
+          </div>
+        ` : ''}
+      </div>`;
+  }
+
+  function displayTop3Predictions(top3) {
+    // Find or create top3 section
+    let top3Section = document.getElementById('top3Predictions');
+    if (!top3Section) {
+      top3Section = document.createElement('div');
+      top3Section.id = 'top3Predictions';
+      top3Section.className = 'info-section';
+      resultsPanel.insertBefore(top3Section, probabilitiesTable.parentElement);
+    }
+
+    const top3HTML = top3.map((item, index) => {
+      const [className, prob] = Array.isArray(item) ? item : [item.class || item.name, item.probability || item.prob];
+      const displayName = className.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const percentage = (prob * 100).toFixed(1);
+      const medal = ['🥇', '🥈', '🥉'][index] || '';
+      
+      return `
+        <div class="top3-item rank-${index + 1}">
+          <span class="medal">${medal}</span>
+          <span class="class-name">${displayName}</span>
+          <span class="probability">${percentage}%</span>
+        </div>`;
+    }).join('');
+
+    top3Section.innerHTML = `
+      <h3>🏆 Top 3 Predictions</h3>
+      <div class="top3-container">
+        ${top3HTML}
+      </div>`;
+  }
+
+  function displayArtifacts(artifactsData) {
+    if (!artifactsData) {
+      artifacts.innerHTML = '<p>No artifacts available.</p>';
+      return;
+    }
+
+    // Prioritize zoom overlay, then full overlay, then regular overlay
+    const overlayUrl = artifactsData.overlay_zoom || artifactsData.overlay_full || 
+                      artifactsData.overlay || artifactsData.overlay_png;
+    
+    const heatmapUrl = artifactsData.heatmap || artifactsData.heatmap_png;
+  const reportUrl = artifactsData.pdf || artifactsData.report_pdf || artifactsData.report;
+
+    let artifactsHTML = '<div class="artifacts-grid">';
+    
+    if (overlayUrl) {
+      artifactsHTML += `
+        <div class="artifact-item">
+          <h4>🎯 Lesion Analysis</h4>
+          <img src="${overlayUrl}" alt="Lesion Overlay" class="artifact-image" 
+               onclick="openImageModal('${overlayUrl}', 'Lesion Analysis Overlay')">
+          <div class="artifact-controls">
+            <button onclick="downloadArtifact('${overlayUrl}', 'lesion-overlay.png')" class="btn-small">
+              📥 Download
+            </button>
+          </div>
+        </div>`;
+    }
+
+    if (heatmapUrl) {
+      artifactsHTML += `
+        <div class="artifact-item">
+          <h4>🔥 Activation Heatmap</h4>
+          <img src="${heatmapUrl}" alt="Activation Heatmap" class="artifact-image"
+               onclick="openImageModal('${heatmapUrl}', 'Grad-CAM Activation Heatmap')">
+          <div class="artifact-controls">
+            <button onclick="downloadArtifact('${heatmapUrl}', 'heatmap.png')" class="btn-small">
+              📥 Download
+            </button>
+          </div>
+        </div>`;
+    }
+
+    if (reportUrl) {
+      artifactsHTML += `
+        <div class="artifact-item">
+          <h4>📄 Clinical Report</h4>
+          <div class="pdf-preview">
+            <div class="pdf-icon">📋</div>
+            <p>Comprehensive analysis report</p>
+          </div>
+          <div class="artifact-controls">
+            <button type="button" onclick="window.open('${reportUrl}', '_blank')" class="btn-small">
+              👁️ View
+            </button>
+            <button type="button" onclick="downloadArtifact('${reportUrl}', 'report.pdf')" class="btn-small">
+              📥 Download
+            </button>
+          </div>
+        </div>`;
+    }
+
+    // Add toggle for full vs zoom overlay if both available
+    if (artifactsData.overlay_full && artifactsData.overlay_zoom) {
+      artifactsHTML += `
+        <div class="overlay-toggle">
+          <button onclick="toggleOverlayView('${artifactsData.overlay_full}', '${artifactsData.overlay_zoom}')" 
+                  class="btn-toggle" id="overlayToggleBtn">
+            🔄 Switch to Full View
+          </button>
+        </div>`;
+    }
+
+    artifactsHTML += '</div>';
+    artifacts.innerHTML = artifactsHTML;
+  }
+
+  function getRecommendationColor(recommendation) {
+    if (!recommendation) return 'gray';
+    const rec = recommendation.toLowerCase();
+    if (rec.includes('observe')) return 'green';
+    if (rec.includes('dermoscopy')) return 'yellow';
+    if (rec.includes('biopsy')) return 'orange';
+    if (rec.includes('mohs') || rec.includes('wle')) return 'red';
+    return 'gray';
+  }
+
+  // Utility functions for enhanced features
+  window.openImageModal = function(imageUrl, title) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'image-modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>${title}</h3>
+          <button class="modal-close" onclick="this.closest('.image-modal').remove()">×</button>
+        </div>
+        <div class="modal-body">
+          <img src="${imageUrl}" alt="${title}" class="modal-image">
+        </div>
+      </div>`;
+    
+    document.body.appendChild(modal);
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+  };
+
+  window.downloadArtifact = function(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  window.toggleOverlayView = function(fullUrl, zoomUrl) {
+    const currentOverlay = document.querySelector('.artifact-image[src*="overlay"]');
+    const toggleBtn = document.getElementById('overlayToggleBtn');
+    
+    if (currentOverlay && toggleBtn) {
+      if (currentOverlay.src.includes('full')) {
+        currentOverlay.src = zoomUrl;
+        toggleBtn.textContent = '🔄 Switch to Full View';
+      } else {
+        currentOverlay.src = fullUrl;
+        toggleBtn.textContent = '🔄 Switch to Zoom View';
+      }
+    }
+  };
+
+  // Initialize the application
   loadMetadata();
   setupFileUpload();
   setupAnalyzeButton();
