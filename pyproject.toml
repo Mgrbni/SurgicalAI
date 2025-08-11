@@ -1,0 +1,48 @@
+[project]
+name = "surgicalai"
+version = "0.1.0"
+description = "AI-powered surgical planning for dermatologic reconstruction"
+authors = [
+    {name = "Mgrbni", email = "mehdi.gharbi@surgicalai.dev"},
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "scikit-image>=0.20.0",
+    "opencv-python>=4.8.0",
+    "pillow>=10.0.0",
+    "mediapipe>=0.10.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "jinja2>=3.1.0",
+    "weasyprint>=59.0",
+    "pydantic>=2.0.0",
+    "rich>=13.0.0",
+    "tyro>=0.5.0",
+    "matplotlib>=3.7.0",
+    "shapely>=2.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+]
+requires-python = ">=3.9"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+addopts = "--cov=surgicalai"
+testpaths = ["tests"]
+
+[tool.ruff]
+select = ["E", "F", "I"]
+ignore = []
+line-length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+[tool.setuptools.packages.find]
+where = ["src"]

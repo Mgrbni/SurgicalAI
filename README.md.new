@@ -1,0 +1,65 @@
+# SurgicalAI — Photo-Only Surgical Planning
+
+FastAPI server + web client for surgical planning using 2D photos only. Uses an AI-powered vision pipeline to analyze patient photos and provide surgical recommendations.
+
+## Quickstart (Photo-Only)
+
+```bash
+python -m venv .venv && .venv\Scripts\activate    # Windows
+python -m pip install -e .
+python -m pip install fastapi uvicorn[standard] python-multipart
+python -m uvicorn server.http_api:app --reload --port 8000
+python -m http.server 5173 -d client
+```
+
+Open http://localhost:5173 to use the client UI, which communicates with the FastAPI server at http://localhost:8000.
+
+## Installation
+
+**Requires Python 3.8 or newer.**
+
+Windows: [Download Python 3.10 or newer](https://www.python.org/downloads/windows/)
+
+Linux/Mac: Install with pyenv (example for 3.11.9):
+```bash
+pyenv install 3.11.9
+pyenv virtualenv 3.11.9 surgicalai-env
+pyenv activate surgicalai-env
+```
+
+## Features
+
+This version has been streamlined to work with 2D photos only:
+- 3D mesh processing has been disabled (Open3D and trimesh dependencies removed)
+- UI updated for photo-only workflow
+- Server API simplified for photo upload and analysis
+- Vision pipeline optimized for 2D image analysis
+
+## API Endpoints
+
+- GET /health — service health check
+- GET /api/metadata — get facial subunits taxonomy
+- POST /api/analyze — analyze a patient photo with metadata
+- GET /api/artifact/{path} — retrieve artifacts (images, reports, etc.)
+
+## Example Workflow
+
+1. Select a patient photo
+2. Enter patient metadata (age, sex, site, etc.)
+3. Submit for analysis
+4. View results including:
+   - Classification probabilities
+   - Decision gate (proceed/defer)
+   - Flap suggestions
+   - Risk notes
+   - Visualization overlays
+   - Downloadable PDF report
+
+## Development
+
+The application is structured as:
+- `server/` - FastAPI backend
+- `client/` - HTML/JS/CSS frontend
+- `src/surgicalai/` - Core Python package
+- `data/` - Sample images for testing
+- `runs/` - Output directory for analysis results

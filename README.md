@@ -1,15 +1,32 @@
-# SurgicalAI — GPT‑wired Demo
+# SurgicalAI — Photo-Only Surgical Planning
 
 FastAPI server + tiny static client using OpenAI **Responses API** with **Structured Outputs** and streaming. Keys stay server‑side. Retries/backoff + token caps protect demo day.
 
-## Quickstart
+## Quickstart (Photo-Only)
 
 ```bash
-cp .env.example .env   # paste your OPENAI_API_KEY
-make demo              # installs deps, runs uvicorn on :8000
+python -m venv .venv && .venv\Scripts\activate    # Windows
+pip install -e .
+pip install fastapi uvicorn[standard] python-multipart
+python -m uvicorn server.http_api:app --reload --port 8000
 ```
 
 Open http://localhost:8000 to use the client UI.
+
+## Installation
+
+**Requires Python 3.8 or newer.**
+
+Windows: [Download Python 3.10 or newer](https://www.python.org/downloads/windows/)
+
+Linux/Mac: Install with pyenv (example for 3.11.9):
+```bash
+pyenv install 3.11.9
+pyenv virtualenv 3.11.9 surgicalai-env
+pyenv activate surgicalai-env
+```
+
+Note: 3D features have been disabled in this version (Open3D removed).
 
 Endpoints
 •GET /healthz — service health + current default model
@@ -36,12 +53,11 @@ Notes
 ## AFTER WRITING FILES — VERIFY & RUN
 
 1) Create virtualenv, install deps, run server:
-- Prefer `make demo`
-- If Make isn’t available, run:
   - `python -m venv .venv`
   - `. .venv/bin/activate`
   - `pip install -r requirements.txt`
-  - `uvicorn server.server:app --host 0.0.0.0 --port 8000`
+  - `pip install -e .`  # src-layout: enables imports like 'surgicalai.vision.models'
+  - `python -m uvicorn server.http_api:app --reload --port 8000`  # use current venv
 
 2) Open `http://localhost:8000`, type a prompt, click **Infer** or **Stream**.
 3) Structured JSON requires the checkbox in the UI.

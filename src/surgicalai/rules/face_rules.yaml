@@ -1,0 +1,90 @@
+# surgicalai/rules/face_rules.yaml
+meta:
+  version: 0.1
+  last_updated: 2025-08-11
+  disclaimer: "Decision support only. Not for clinical use."
+
+taxonomy:
+  facial_subunits:
+    - forehead
+    - temple
+    - periorbital_upper
+    - periorbital_lower
+    - medial_canthal
+    - nasal_dorsum
+    - nasal_tip
+    - alar
+    - nasolabial_fold
+    - cheek_medial
+    - cheek_lateral
+    - lip_upper
+    - lip_lower
+    - preauricular
+    - postauricular
+    - auricle
+    - chin
+    - mandibular
+    - submental
+
+shared_constraints:
+  h_zone: ["nose","eyelid","medial_canthal","ear","lip"]
+  danger_structures:
+    supraorbital_nerve: {region: "forehead", approx_xyz: null, notes: "stay superior to supraorbital rim; avoid deep undermining"}
+    supratrochlear_nerve: {region: "glabella", notes: "medial brow"}
+    facial_artery: {region: "nasolabial", notes: "crosses at ala/base; beware when designing flaps"}
+    marginal_mandibular_nerve: {region: "mandibular", notes: "stay 1–2 cm below mandibular border when dissecting inferiorly"}
+    parotid_duct: {region: "preauricular/cheek_lateral", notes: "line from tragus → mid‑upper lip; avoid transection"}
+
+diagnoses:
+  melanoma:
+    surgical_margins:
+      in_situ: {peripheral_cm: "0.5–1.0", deep: "to but not including fascia", source_ids: ["NCCN_MEL","AAD_MEL","NBK572149"]}
+      "<=1mm":  {peripheral_cm: "1",   deep: "to but not incl. fascia", source_ids: ["NCCN_MEL","AAD_MEL","NBK572149"]}
+      "1.01–2mm": {peripheral_cm: "1–2", deep: "to but not incl. fascia", source_ids: ["NCCN_MEL","NBK572149"]}
+      ">2mm":  {peripheral_cm: "2",   deep: "to but not incl. fascia", source_ids: ["NCCN_MEL","NBK572149"]}
+    reconstruction_policy:
+      defer_if:
+        - condition: "H‑zone location"
+          rationale: "tissue‑sparing/permangan margins, frequent need for staged clearance"
+        - condition: "melanoma_prob >= 0.30"
+          rationale: "oncology priority over cosmesis"
+      proceed_if: "histologically clear margins and low risk"
+    flap_preferences_by_subunit:
+      cheek_medial: ["nasolabial rotation", "cervicofacial advancement"]
+      nasal_dorsum: ["glabellar V‑Y", "dorsal nasal (Rieger)"]
+      nasal_tip: ["bilobed (for small defects)","paramedian forehead flap (for large)"]
+      lip_upper: ["advancement with vermilion alignment", "Abbé flap if central loss"]
+    notes: "Consider staged excision/lentigo maligna on head/neck; SLNB as per staging (not handled here)."
+
+  bcc:
+    risk_stratification:
+      high_risk_flags: ["H‑zone","aggressive histology","recurrent","ill‑defined borders","immunosuppressed","perineural invasion"]
+    surgical_margins_low_risk: {peripheral_mm: "4–5", source_ids: ["NCCN_BCC","HNNMSC_Review"]}
+    surgical_margins_high_risk: {approach: "Mohs or staged excision preferred on face/H‑zone", source_ids: ["NCCN_BCC"]}
+    flap_preferences_by_subunit:
+      nasal_ala: ["melolabial (nasolabial) flap","paramedian forehead (large)"]
+      medial_canthal: ["glabellar rotation","paramedian forehead (extensive)"]
+    reconstruction_policy:
+      defer_if: ["H‑zone with ill‑defined borders without margin control"]
+      proceed_if: "Mohs/staged clear margins, defect amenable to local tissue"
+
+  cscc:
+    risk_stratification:
+      high_risk_flags: ["H‑zone","poor differentiation",">2 cm",">6 mm depth","PNI","immunosuppressed","recurrent"]
+    surgical_margins_low_risk: {peripheral_mm: "≥4", source_ids: ["AAD_cSCC","NCCN_cSCC","HNNMSC_Review"]}
+    surgical_margins_high_risk: {approach: "Mohs or staged excision; wider margins if standard excision", source_ids: ["AAD_cSCC","NCCN_cSCC"]}
+    flap_preferences_by_subunit:
+      lower_eyelid: ["Mustardé cheek rotation"]
+      temple/forehead: ["rotation/advancement along tension lines"]
+    reconstruction_policy:
+      defer_if: ["positive/unknown margins","perineural symptoms","H‑zone without margin control"]
+      proceed_if: "histologically clear with risk addressed"
+
+sources:
+  NCCN_MEL: {title: "NCCN Guidelines® Insights: Melanoma: Cutaneous", url: "https://jnccn.org/.../p364", year: 2021}
+  AAD_MEL:  {title: "AAD Melanoma Clinical Guideline (JAAD)", url: "https://www.aad.org/member/clinical-quality/guidelines/melanoma", year: 2019}
+  NBK572149: {title: "Cutaneous Malignant Melanoma: Guideline‑Based Management", url: "https://www.ncbi.nlm.nih.gov/books/NBK572149/", year: 2025}
+  NCCN_BCC: {title: "NCCN Basal Cell Skin Cancer v2.2024/2025", url: "https://jnccn.org/.../bcc", year: 2024}
+  HNNMSC_Review: {title: "Head and neck nonmelanoma skin cancers (review)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC10919275/", year: 2024}
+  AAD_cSCC: {title: "AAD Guidelines of care for cSCC", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC6652228/", year: 2018}
+  NCCN_cSCC: {title: "NCCN Squamous Cell Skin Cancer", url: "https://www.nccn.org/guidelines/guidelines-detail?category=1&id=1465", year: 2023}

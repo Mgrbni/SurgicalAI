@@ -4,28 +4,116 @@
   <meta charset="utf-8"/>
   <title>SurgicalAI Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <style>
-    body { font-family: system-ui, Arial; margin: 24px; max-width: 860px }
-    textarea { width:100%; height:150px; padding:10px; }
-    pre { white-space: pre-wrap; background:#111; color:#eee; padding:12px; border-radius:8px; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
-    .row > * { flex:1; min-width: 180px; }
-    button { padding:10px 16px; cursor:pointer; }
-    label { display:flex; align-items:center; gap:6px; }
-  </style>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <h2>🧠 SurgicalAI — GPT‑wired</h2>
-  <div class="row">
-    <textarea id="prompt" placeholder="Type a prompt (e.g., `Generate LesionReport for a 12mm pigmented lesion on left malar...`)"></textarea>
+  <div class="warning-banner">
+    NOT FOR CLINICAL USE — DEMO ONLY
   </div>
-  <div class="row">
-    <button id="btnInfer">Infer</button>
-    <button id="btnStream">Stream</button>
-    <label><input type="checkbox" id="jsonMode"/> Structured JSON</label>
+  
+  <div class="container">
+    <div class="header">
+      <h1>🧠 SurgicalAI — Photo Analysis</h1>
+    </div>
+    
+    <div class="main-content">
+      <!-- Left Column: Image & Preview -->
+      <div class="left-column">
+        <div class="form-group">
+          <label>Patient Image</label>
+          <div id="dropArea" class="drop-area">
+            <p>Drag and drop an image here or click to select</p>
+            <input type="file" id="imageUpload" accept="image/jpeg, image/png" style="display: none" />
+            <img id="imagePreview" class="image-preview" />
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Column: Form & Results -->
+      <div class="right-column">
+        <div class="input-panel">
+          <h2>Patient Data</h2>
+          
+          <!-- Patient Info -->
+          <div class="form-group">
+            <label for="site">Facial Subunit</label>
+            <select id="site" required>
+              <option value="" disabled selected>Select facial subunit...</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="age">Age</label>
+            <input type="number" id="age" min="0" max="120" placeholder="Optional" />
+          </div>
+          
+          <div class="form-group">
+            <label for="sex">Sex</label>
+            <select id="sex" required>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="priorHistology" />
+              Prior Histology
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="illDefinedBorders" />
+              Ill-defined Borders
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="recurrent" />
+              Recurrent
+            </label>
+          </div>
+          
+          <button id="analyzeBtn" disabled>Analyze</button>
+          <p class="disclaimer">Research prototype — not for clinical use</p>
+        </div>
+        
+        <div class="results-panel">
+          <div id="progressSteps" class="progress-steps">
+            Waiting for input...
+          </div>
+          
+          <div id="resultsPanel" style="display: none;">
+            <div class="results-section">
+              <h3 class="section-title">Classification Results</h3>
+              <div id="probabilitiesContainer"></div>
+            </div>
+            
+            <div class="results-section">
+              <h3 class="section-title">Oncology Gate Decision</h3>
+              <p id="gateDecision"></p>
+            </div>
+            
+            <div class="results-section">
+              <h3 class="section-title">Visualizations</h3>
+              <div id="artifacts"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <h3>Output</h3>
-  <pre id="out"></pre>
-  <script src="./api.js"></script>
+  
+  <!-- Toast for error messages -->
+  <div id="toast" class="toast"></div>
+  
+  <!-- Footer -->
+  <footer class="footer">
+    <p>© Dr. Mehdi Ghorbani Karimabad — Plastic, Reconstructive & Aesthetic Surgery</p>
+  </footer>
+  
+  <script src="api.js"></script>
 </body>
 </html>

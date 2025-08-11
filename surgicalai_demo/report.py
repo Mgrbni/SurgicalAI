@@ -7,6 +7,14 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
 
 
+def add_footer(c: canvas.Canvas, W: float, H: float) -> None:
+    """Add footer with credit to Dr. Ghorbani on every page."""
+    c.setFont("Helvetica", 10)
+    footer_text = "© Dr. Mehdi Ghorbani Karimabad — Plastic, Reconstructive & Aesthetic Surgery"
+    text_width = c.stringWidth(footer_text, "Helvetica", 10)
+    c.drawString(W - text_width - 2*cm, 1*cm, footer_text)
+
+
 def add_ai_page(c: canvas.Canvas, W, H, ai: Dict[str, Any]) -> None:
     c.setFont("Helvetica-Bold", 12)
     c.drawString(2*cm, H-2*cm, "AI Summary (decision-support, not diagnosis)")
@@ -49,6 +57,9 @@ def add_ai_page(c: canvas.Canvas, W, H, ai: Dict[str, Any]) -> None:
         line("Notes:")
         for i in range(0, len(notes), 100):
             line("  " + notes[i:i+100])
+    
+    # Add footer to this page
+    add_footer(c, W, H)
 
 
 def make_pdf(
@@ -106,6 +117,8 @@ def make_pdf(
         except Exception:
             continue
 
+    # Add footer to first page
+    add_footer(c, W, H)
     c.showPage()
 
     # ---- Page 2: AI summary ----
