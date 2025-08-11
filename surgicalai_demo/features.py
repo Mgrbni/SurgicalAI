@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Any
 import json
 import numpy as np
 import cv2
@@ -160,7 +160,8 @@ def _elevation_satellite(blob: np.ndarray) -> float:
     return float(min(satellites, 5.0))
 
 
-def compute_abcde(rgb: np.ndarray) -> tuple[ABCDE, np.ndarray]:
+def compute_abcde(rgb: np.ndarray) -> Dict[str, any]:
+    """Compute ABCDE features and return as dict with additional metrics."""
     skin = _skin_mask(rgb)
     lesion0 = _lesion_candidate(rgb, skin)
     blob = _largest_blob(lesion0)
@@ -171,7 +172,27 @@ def compute_abcde(rgb: np.ndarray) -> tuple[ABCDE, np.ndarray]:
     C = _color_variegation(rgb, blob)
     D = _diameter_px(blob)
     E = _elevation_satellite(blob)
-    return ABCDE(A, B, C, D, E), blob
+    
+    # Calculate center and additional metrics
+    ys, xs = np.where(blob > 0)
+    center_xy = (int(np.mean(xs)), int(np.mean(ys))) if len(xs) > 0 else (0, 0)
+    
+    # Additional feature extraction for ensemble classifier
+    additional_features = _extract_additional_features(rgb, blob)
+    
+    # Create comprehensive feature dict
+    features = {
+        'asymmetry': A,
+        'border_irregularity': B,
+        'color_variegation': C,
+        'diameter_px': D,
+        'elevation_satellite': E,
+        'center_xy': center_xy,
+        'heatmap': blob,  # Store the refined blob as heatmap
+        **additional_features
+    }
+    
+    return features
 
 
 # --------------------------- Attention/overlay ---------------------------
@@ -202,8 +223,53 @@ def _attention_map(rgb: np.ndarray, blob: np.ndarray) -> np.ndarray:
     return att.astype(np.float32)
 
 
-def save_overlay(rgb: np.ndarray, blob: np.ndarray, out_path: Path):
+def _extract_additional_features(rgb: np.ndarray, blob: np.ndarray) -> Dict[str, float]:
+    """Extract additional features for ensemble classifier."""
+    if blob.sum() == 0:
+        return {}
+    
+    # Color analysis
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+    lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)
+    
+    # Extract lesion region
+    lesion_mask = blob > 0
+    lesion_rgb = rgb[lesion_mask]
+    lesion_hsv = hsv[lesion_mask]
+    lesion_lab = lab[lesion_mask]
+    
+    additional_features = {}
+    
+    if len(lesion_rgb) > 0:
+        # Color statistics
+        additional_features['mean_darkness'] = 1.0 - (np.mean(lesion_lab[:, 0]) / 255.0)
+        additional_features['color_std'] = np.std(lesion_rgb, axis=0).mean() / 255.0
+        
+        # Surface texture approximations
+        gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+        lesion_gray = gray[lesion_mask]
+        additional_features['surface_smoothness'] = 1.0 - (np.std(lesion_gray) / 255.0)
+        additional_features['surface_roughness'] = np.std(lesion_gray) / 255.0
+        
+        # Dermoscopic-like features
+        additional_features['translucency'] = np.mean(lesion_lab[:, 0]) / 255.0  # Approximate translucency
+        additional_features['keratotic'] = min(np.std(lesion_hsv[:, 1]) / 255.0, 1.0)  # Keratotic surface approximation
+        additional_features['waxy_surface'] = additional_features['surface_smoothness']  # Approximate waxy appearance
+    
+    return additional_features
+
+def save_overlay(rgb: np.ndarray, heatmap: Optional[np.ndarray], out_path: Path):
     """Save lesion outline + attention heat overlay with a small footer watermark."""
+    if heatmap is None:
+        # Just save the original image with watermark
+        vis = rgb.copy()
+        h, w = vis.shape[:2]
+        footer = "Developed by Dr. Mehdi Ghorbani"
+        cv2.putText(vis, footer, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (240, 240, 240), 1, cv2.LINE_AA)
+        Image.fromarray(vis).save(out_path)
+        return
+        
+    blob = heatmap  # For backward compatibility
     vis = rgb.copy()
 
     # draw lesion contour
@@ -229,16 +295,23 @@ def save_overlay(rgb: np.ndarray, blob: np.ndarray, out_path: Path):
     Image.fromarray(blended).save(out_path)
 
 
-def dump_metrics(abcde: ABCDE, extras: dict, out_json: Path):
+def dump_metrics(
+    out_json: Path,
+    img_path: str,
+    mm_per_px: Optional[float],
+    metrics_px: Dict[str, Any],
+    metrics_mm: Optional[Dict[str, Any]],
+    abcde: Dict[str, Any],
+):
+    """Dump comprehensive metrics to JSON file."""
     payload = {
-        "asymmetry": abcde.asymmetry,
-        "border_irregularity": abcde.border_irregularity,
-        "color_variegation": abcde.color_variegation,
-        "diameter_px": abcde.diameter_px,
-        "elevation_satellite": abcde.elevation_satellite,
-        **extras,
+        "image_path": img_path,
+        "scale_mm_per_px": mm_per_px,
+        "metrics_px": metrics_px,
+        "metrics_mm": metrics_mm,
+        "abcde_features": abcde,
     }
-    out_json.write_text(json.dumps(payload, indent=2))
+    out_json.write_text(json.dumps(payload, indent=2, default=str))
 
 
 # ------------------------ Scale estimation helpers -----------------------
@@ -255,55 +328,84 @@ WTW_MM_DEFAULT = 11.7       # white-to-white corneal diameter (mean)
 
 
 def estimate_scale(
-    landmarks: Dict[str, Tuple[float, float]],
+    rgb: np.ndarray,
+    landmarks: Optional[Dict[str, Tuple[float, float]]] = None,
     manual_mm_per_px: Optional[float] = None,
     ipd_mm: float = IPD_MM_DEFAULT,
     wtw_mm: float = WTW_MM_DEFAULT,
-) -> ScaleEstimate:
+) -> Optional[float]:
     """
-    landmarks: {"left_pupil": (x,y), "right_pupil": (x,y),
-                "left_wtw_a": (x,y), "left_wtw_b": (x,y),
-                "right_wtw_a": (x,y), "right_wtw_b": (x,y)}
-    Order of preference: IPD -> WTW -> manual -> unknown(None)
+    Estimate image scale in mm per pixel.
+    
+    Args:
+        rgb: Input image
+        landmarks: Detected landmarks (optional)
+        manual_mm_per_px: Manual scale override (optional)
+        ipd_mm: Interpupillary distance in mm (default 63.0)
+        wtw_mm: White-to-white corneal diameter in mm (default 11.7)
+        
+    Returns:
+        Scale in mm per pixel, or None if cannot estimate
     """
     import math
-
-    # IPD
-    lp, rp = landmarks.get("left_pupil"), landmarks.get("right_pupil")
-    if lp and rp:
-        dx, dy = rp[0] - lp[0], rp[1] - lp[1]
-        px_ipd = math.hypot(dx, dy)
-        if px_ipd > 2.0:
-            return ScaleEstimate(ipd_mm / px_ipd, "ipd", {"px_ipd": px_ipd, "ipd_mm": ipd_mm})
-
-    # WTW (avg of available eyes)
-    l_a, l_b = landmarks.get("left_wtw_a"), landmarks.get("left_wtw_b")
-    r_a, r_b = landmarks.get("right_wtw_a"), landmarks.get("right_wtw_b")
-
-    def seg_len(a, b): return math.hypot(b[0] - a[0], b[1] - a[1])
-    wtw_px = []
-    if l_a and l_b: wtw_px.append(seg_len(l_a, l_b))
-    if r_a and r_b: wtw_px.append(seg_len(r_a, r_b))
-    if wtw_px:
-        px_wtw = sum(wtw_px) / len(wtw_px)
-        if px_wtw > 2.0:
-            return ScaleEstimate(wtw_mm / px_wtw, "wtw", {"px_wtw": px_wtw, "wtw_mm": wtw_mm})
-
-    # Manual
+    
+    # Manual override
     if manual_mm_per_px and manual_mm_per_px > 0:
-        return ScaleEstimate(manual_mm_per_px, "manual", {})
+        return manual_mm_per_px
+    
+    # If landmarks provided, use them
+    if landmarks:
+        # IPD estimation
+        lp, rp = landmarks.get("left_pupil"), landmarks.get("right_pupil")
+        if lp and rp:
+            dx, dy = rp[0] - lp[0], rp[1] - lp[1]
+            px_ipd = math.hypot(dx, dy)
+            if px_ipd > 2.0:
+                return ipd_mm / px_ipd
 
-    return ScaleEstimate(None, "unknown", {})
+        # WTW estimation (avg of available eyes)
+        l_a, l_b = landmarks.get("left_wtw_a"), landmarks.get("left_wtw_b")
+        r_a, r_b = landmarks.get("right_wtw_a"), landmarks.get("right_wtw_b")
+
+        def seg_len(a, b): return math.hypot(b[0] - a[0], b[1] - a[1])
+        wtw_px = []
+        if l_a and l_b: wtw_px.append(seg_len(l_a, l_b))
+        if r_a and r_b: wtw_px.append(seg_len(r_a, r_b))
+        if wtw_px:
+            px_wtw = sum(wtw_px) / len(wtw_px)
+            if px_wtw > 2.0:
+                return wtw_mm / px_wtw
+    
+    # Fallback: rough estimate based on image size (very approximate)
+    h, w = rgb.shape[:2]
+    if w > 800:  # Assume close-up lesion photo
+        return 0.05  # ~0.05 mm/pixel for typical dermatology photos
+    else:
+        return 0.1   # Coarser scale for smaller images
+        
+    return None
 
 
 def defect_metrics_px_to_mm(
-    px_area: Optional[float],
-    px_equiv_diam: Optional[float],
+    metrics_px: Dict[str, Any],
     mm_per_px: Optional[float],
-) -> Dict[str, Optional[float]]:
-    """Convert pixel area/diameter to mm values using the provided scale."""
+) -> Optional[Dict[str, Optional[float]]]:
+    """Convert pixel metrics to mm values using the provided scale."""
     if not mm_per_px:
-        return {"area_mm2": None, "equiv_diam_mm": None}
-    area_mm2 = (px_area * (mm_per_px ** 2)) if px_area is not None else None
-    diam_mm = (px_equiv_diam * mm_per_px) if px_equiv_diam is not None else None
-    return {"area_mm2": area_mm2, "equiv_diam_mm": diam_mm}
+        return None
+    
+    result = {}
+    
+    # Convert diameter
+    if metrics_px.get("diameter_px") is not None:
+        result["diameter_mm"] = metrics_px["diameter_px"] * mm_per_px
+    
+    # Convert area if available
+    if metrics_px.get("area_px") is not None:
+        result["area_mm2"] = metrics_px["area_px"] * (mm_per_px ** 2)
+    
+    # Copy center coordinates
+    if metrics_px.get("center_xy") is not None:
+        result["center_xy"] = metrics_px["center_xy"]
+    
+    return result
