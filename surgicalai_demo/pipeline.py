@@ -4,177 +4,215 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 import numpy as np
 
 from .config import SETTINGS
-from .features import _read_rgb, compute_abcde, save_overlay, dump_metrics
-from .rules import triage_tier0
+from .features import (
+    _read_rgb,
+    compute_abcde,
+    save_overlay,
+    dump_metrics,
+    estimate_scale,
+    defect_metrics_px_to_mm,
+)
+from .rules import plan_reconstruction, triage_tier0
 from .retrieval import SimpleAnn, feature_vector_from_abcde, save_thumbnails
 from .report import make_pdf
 
 
-# ---------------------------- helpers ----------------------------
+# -------------------------- utility helpers --------------------------
 
-def _pick_file_if_needed(img_path: Optional[Path]) -> Optional[Path]:
-    """Return a valid image path, or open a file dialog if missing."""
-    if img_path and Path(img_path).exists():
-        return Path(img_path)
+def _coalesce_lesion_image(provided: Optional[Path]) -> Path:
+    """Pick a lesion image: prefer provided; else try SETTINGS or ./data."""
+    if provided and provided.exists():
+        return provided
+
+    # Try a sample from SETTINGS if present
+    sample = None
     try:
-        import tkinter as tk
-        from tkinter import filedialog
-        root = tk.Tk()
-        root.withdraw()
-        f = filedialog.askopenfilename(
-            title="Select lesion image",
-            filetypes=[("Images", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff")],
-        )
-        return Path(f) if f else None
+        sample = Path(getattr(SETTINGS, "sample_image", "")) if getattr(SETTINGS, "sample_image", "") else None
     except Exception:
-        # Headless/CI fallback
-        return img_path
+        sample = None
+
+    if sample and sample.exists():
+        return sample
+
+    # Fallback: first jpg/png under data/
+    for root in ("data", "assets", "."):
+        p = Path(root)
+        if p.exists():
+            for ext in ("*.jpg", "*.jpeg", "*.png"):
+                picks = list(p.rglob(ext))
+                if picks:
+                    return picks[0]
+
+    raise FileNotFoundError("No lesion image found. Pass --image PATH or place a jpg/png under ./data")
 
 
-def _ask_patient_info() -> Dict[str, Any]:
-    """Collect optional demographics and context from the console."""
-    def _clean(x: str) -> Optional[str]:
-        x = (x or "").strip()
-        return None if x == "" else x
-
-    print("\nEnter optional patient/photo info (press Enter to skip):")
-    age = _clean(input("  Age (years): "))
-    sex = _clean(input("  Sex (male/female/other): "))
-    site = _clean(input("  Body site (e.g., cheek, scalp, trunk): "))
-    ptype = _clean(input("  Photo type (dermoscopy / clinical): "))
-    scale = _clean(input("  Known scale (mm per pixel, e.g., 0.02) or blank: "))
-
+def _prompt_optional(prompt: str) -> str:
     try:
-        age = int(age) if age is not None else None
+        return input(prompt) or ""
     except Exception:
-        age = None
+        return ""
+
+
+def _safe_int(x: str, default: Optional[int] = None) -> Optional[int]:
     try:
-        scale = float(scale) if scale is not None else None
+        return int(x)
     except Exception:
-        scale = None
-
-    return {
-        "age": age,
-        "sex": sex,
-        "body_site": site,
-        "photo_type": ptype,
-        "mm_per_px": scale,
-    }
+        return default
 
 
-# ----------------------------- main ------------------------------
+def _safe_float(x: str, default: Optional[float] = None) -> Optional[float]:
+    try:
+        return float(x)
+    except Exception:
+        return default
+
+
+# ------------------------------- core --------------------------------
 
 def run_demo(
     face_img_path: Optional[Path],
     lesion_img_path: Optional[Path],
     out_dir: Path,
     ask: bool = False,
-    use_openai: bool = True,
-):
+) -> Dict[str, Any]:
     """
-    Tier‑0 pipeline:
-      • pick/ingest image (+ optional patient inputs)
-      • compute ABCDE + overlay
-      • rules triage
-      • simple NN thumbnails
-      • OpenAI JSON (or deterministic fallback)
-      • 2‑page PDF (metrics + AI summary)
+    End‑to‑end offline demo:
+      - load lesion image
+      - compute ABCDE features (+ simple heatmap if available)
+      - Tier‑0 triage (string label)
+      - optional retrieval of neighbors
+      - oncologic gate + flap suggestions
+      - write overlay.png, ai_summary.json, report.pdf
+    Returns the JSON summary as a dict.
     """
+    out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1) choose image (dialog if not provided)
-    lesion_img_path = _pick_file_if_needed(lesion_img_path)
-    if not lesion_img_path or not lesion_img_path.exists():
-        raise FileNotFoundError("No lesion image selected/found.")
+    # 1) Load lesion image
+    lesion_path = _coalesce_lesion_image(lesion_img_path)
+    img_rgb = _read_rgb(lesion_path)
 
-    # 2) optional patient inputs (used by rules + reported in PDF)
-    user = _ask_patient_info() if ask else {
+    # 2) Optional metadata from user
+    meta: Dict[str, Any] = {
         "age": None,
-        "sex": None,
-        "body_site": None,
-        "photo_type": None,
-        "mm_per_px": None,
+        "sex": "",
+        "body_site": "",
+        "photo_type": "",
+        "known_scale_mm_per_px": None,
     }
 
-    # 3) features
-    rgb = _read_rgb(lesion_img_path)
-    abcde, blob = compute_abcde(rgb)
+    if ask:
+        print("\nEnter optional patient/photo info (press Enter to skip):")
+        meta["age"] = _safe_int(_prompt_optional("  Age (years): ").strip(), None)
+        meta["sex"] = (_prompt_optional("  Sex (male/female/other): ").strip() or "").lower()
+        meta["body_site"] = (_prompt_optional("  Body site (e.g., cheek, scalp, trunk): ").strip() or "").lower().replace(" ", "_")
+        meta["photo_type"] = (_prompt_optional("  Photo type (dermoscopy / clinical): ").strip() or "").lower()
+        meta["known_scale_mm_per_px"] = _safe_float(_prompt_optional("  Known scale (mm per pixel, e.g., 0.02) or blank: ").strip(), None)
 
-    # 4) triage (rules with priors from inputs)
-    age = user.get("age")
-    body_site = user.get("body_site")
-    tri = triage_tier0(abcde, age, body_site)
+    # 3) ABCDE features + basic lesion metrics (pixels)
+    abcde = compute_abcde(img_rgb)  # dict‑like
+    # Ensure stable keys exist
+    abcde.setdefault("diameter_px", abcde.get("diameter_px", None))
+    abcde.setdefault("center_xy", abcde.get("center_xy", None))
+    heatmap = abcde.get("heatmap")  # may be None
 
-    # 5) artifacts: overlay + metrics.json (merges ABCDE + context)
-    overlay_path = out_dir / "overlay.png"
-    save_overlay(rgb, blob, overlay_path)
-
-    metrics: Dict[str, Any] = {
-        "label": tri.label,
-        "risk_pct": round(tri.risk_pct, 1),
-        "rationale": tri.rationale,
-        "age": user.get("age"),
-        "sex": user.get("sex"),
-        "body_site": user.get("body_site"),
-        "photo_type": user.get("photo_type"),
-        "mm_per_px": user.get("mm_per_px"),
-        "filename": os.path.basename(str(lesion_img_path)),
-    }
-    dump_metrics(abcde, metrics, out_dir / "metrics.json")
-
-    # 6) nearest neighbors (placeholder index using the same image to show UI)
-    ann = SimpleAnn()
-    vecs = np.vstack([feature_vector_from_abcde(abcde)])
-    ann.fit(vecs, [{"path": str(lesion_img_path), "dx": "(demo)"}])
-    hits = ann.query(feature_vector_from_abcde(abcde), k=6)
-    nn_dir = out_dir / "neighbors"
-    save_thumbnails(hits, nn_dir)
-    neighbor_paths = sorted(str(p) for p in nn_dir.glob("nn_*.jpg"))
-
-    # 7) OpenAI or fallback → ai_summary.json
-    #    (always produce AI page content so the PDF never looks empty)
-    full_metrics = json.loads((out_dir / "metrics.json").read_text())
-    full_metrics.update({
-        "asymmetry": abcde.asymmetry,
-        "border_irregularity": abcde.border_irregularity,
-        "color_variegation": abcde.color_variegation,
-        "diameter_px": abcde.diameter_px,
-        "elevation_satellite": abcde.elevation_satellite,
-    })
-
-    ai: Dict[str, Any] = {}
-    if use_openai:
+    # 4) Scale estimation → mm conversion (best effort)
+    mm_per_px = meta["known_scale_mm_per_px"]
+    if mm_per_px is None:
         try:
-            from server.ai_openai import summarize_case  # lazy import
-            ai = summarize_case(full_metrics)
-        except Exception as e:
-            ai = {"error": f"OpenAI call failed: {e}"}
+            mm_per_px = estimate_scale(img_rgb)
+        except Exception:
+            mm_per_px = None
 
-    if not ai or "error" in ai:
-        from server.ai_fallback import fallback_summarize_case
-        ai = fallback_summarize_case(full_metrics)
+    metrics_px = {
+        "diameter_px": abcde.get("diameter_px"),
+        "center_xy": abcde.get("center_xy"),
+    }
+    metrics_mm = defect_metrics_px_to_mm(metrics_px, mm_per_px) if mm_per_px else None
 
-    (out_dir / "ai_summary.json").write_text(json.dumps(ai, indent=2))
+    # 5) Tier‑0 triage — returns STRING label; never access .label
+    tri_label = triage_tier0(abcde, age=meta["age"], body_site=meta["body_site"])
+    
+    # 6) Very simple class probs for planner (demo safe)
+    # If you have a classifier, replace these with real outputs.
+    probs: Dict[str, float] = {
+        "melanoma": float(abcde.get("melanoma_prob", 0.0) or 0.0),
+        "bcc": float(abcde.get("bcc_prob", 0.0) or 0.0),
+        "scc": float(abcde.get("scc_prob", 0.0) or 0.0),
+    }
 
-    # 8) PDF (page 1 metrics; page 2 AI summary)
-    make_pdf(
-        pdf_path=out_dir / "report.pdf",
-        title=SETTINGS.report_title,
-        version=SETTINGS.version,
-        metrics=json.loads((out_dir / "metrics.json").read_text()),
-        overlay_png=str(overlay_path),
-        neighbor_paths=neighbor_paths,
-        ai=ai,
+    # 7) Planning (oncology gates + flap suggestions)
+    plan = plan_reconstruction(
+        probs=probs,
+        location=meta["body_site"] or "cheek",
+        defect_equiv_diam_mm=(metrics_mm or {}).get("diameter_mm"),
+        depth="dermal",
+        laxity="moderate",
+        ill_defined_borders=bool(abcde.get("border_irregularity", 0) and abcde.get("border_irregularity", 0) > 1.8),
+        recurrent_tumor=False,
+        margin_status=None,
     )
 
-    print(f"[OK] Demo artifacts → {out_dir}")
-    print("  - overlay.png")
-    print("  - metrics.json")
-    print("  - ai_summary.json")
-    print("  - neighbors/*")
-    print("  - report.pdf")
+    # 8) Retrieval (optional; non‑fatal if assets missing)
+    neighbors_info: Dict[str, Any] = {}
+    try:
+        ann = SimpleAnn()
+        vec = feature_vector_from_abcde(abcde)
+        hits = ann.search(vec, k=6)
+        thumbs = save_thumbnails(hits, out_dir)
+        neighbors_info = {"neighbors": hits, "thumbnails": thumbs}
+    except Exception:
+        neighbors_info = {"neighbors": [], "thumbnails": []}
+
+    # 9) Visual overlay
+    try:
+        overlay_path = out_dir / "overlay.png"
+        save_overlay(img_rgb, heatmap, overlay_path)
+    except Exception:
+        overlay_path = None
+
+    # 10) Dump metrics + AI summary JSON
+    dump_metrics(
+        out_dir / "metrics.json",
+        img_path=str(lesion_path),
+        mm_per_px=mm_per_px,
+        metrics_px=metrics_px,
+        metrics_mm=metrics_mm,
+        abcde=abcde,
+    )
+
+    summary: Dict[str, Any] = {
+          "triage": {
+            "label": str(tri_label),   # ← IMPORTANT: string, no .label access
+        },
+        "probs": probs,
+        "plan": plan,
+        "meta": meta,
+        "paths": {
+            "overlay_png": str(overlay_path) if overlay_path else None,
+            "lesion_image": str(lesion_path),
+        },
+        **neighbors_info,
+    }
+
+    with open(out_dir / "ai_summary.json", "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+
+    # 11) PDF report (best effort)
+    try:
+        make_pdf(
+            out_path=out_dir / "report.pdf",
+            summary=summary,
+            overlay_path=(out_dir / "overlay.png") if overlay_path else None,
+        )
+    except Exception:
+        # PDF is optional in the demo; continue silently
+        pass
+
+    print(f"\n✅ Demo complete. Outputs in: {out_dir}")
+    return summary

@@ -50,37 +50,39 @@ SCHEMA_HINT = {
   "required":["triage_label","diagnosis_candidates","flap_plan","notes"]
 }
 
-def summarize_case(metrics: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    metrics = {label, risk_pct, rationale, asymmetry, border_irregularity, color_variegation,
-               diameter_px, elevation_satellite, age, body_site}
-    """
-    prompt = {
-        "role":"user",
-        "content":(
-            "Given the Tier-0 metrics below, produce JSON matching the schema. "
-            "Calibrate probabilities with these hints: "
-            "asymmetry↑, border_irregularity>1.3, color_variegation>=2, diameter_px>=60 favor melanoma risk; "
-            "body_site and age adjust priors (face/cheek in older adults can raise suspicion). "
-            "If lesion likely benign, flap_plan.indicated=false. "
-            "If RED FLAG, suggest a conservative flap plan *only after biopsy margin clearance*, "
-            "e.g., rotation flap, advancement, bilobed, rhomboid—choose ONE best fit for site. "
-            f"\n\nSCHEMA_HINT={json.dumps(SCHEMA_HINT)}"
-            f"\n\nMETRICS={json.dumps(metrics)}"
-        )
-    }
+def summarize_case(full_metrics: dict) -> str:
+    from openai import OpenAI
+    import os
+    client = OpenAI()
 
-    client = _client()
-    resp = client.responses.create(
-        model=OPENAI_MODEL,
-        input=[{"role":"system","content":SYSTEM_MSG}, prompt],
-        max_output_tokens=700
+    SYSTEM_MSG = (
+        "You are SurgicalAI, a cautious clinical summarizer. "
+        "Write a brief, structured, non-diagnostic summary for a plastic surgeon. "
+        "Flag uncertainty. Never give medical advice."
     )
-    text = resp.output_text  # SDK returns concatenated text
+    prompt = (
+        "Summarize the following pipeline results for a clinical demo. "
+        "Return 5 bullets: (1) Face/scan metadata, (2) Lesion detection probabilities, "
+        "(3) Heatmap region(s), (4) Flap design candidates with rationale, "
+        "(5) Risks/contraindications with confidence.\n\n"
+        f"{full_metrics}"
+    )
+
     try:
-        data = json.loads(text)
-    except Exception:
-        # fallback: try to extract JSON between braces
-        start = text.find("{"); end = text.rfind("}")
-        data = json.loads(text[start:end+1]) if start!=-1 and end!=-1 else {"error":"LLM JSON parse failed","raw":text}
-    return data
+        resp = client.responses.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            input=[
+                {"role": "system", "content": SYSTEM_MSG},
+                {"role": "user", "content": prompt},
+            ],
+            max_output_tokens=700,
+        )
+        return resp.output_text.strip()
+    except Exception as e:
+        # Dump the server’s JSON error if available — saves you 20 minutes
+        try:
+            from openai._exceptions import OpenAIError
+            if isinstance(e, OpenAIError) and e.response is not None:
+                raise RuntimeError(f"OpenAI error: {e.response.status_code} {e.response.text}") from e
+        finally:
+            raise
