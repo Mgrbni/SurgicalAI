@@ -2,43 +2,55 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>SurgicalAI Demo</title>
+  <title>SurgicalAI - Advanced Surgical Planning</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <div class="warning-banner">
-    NOT FOR CLINICAL USE — DEMO ONLY
+  <div class="warning-banner" id="warningBanner">
+    NOT FOR CLINICAL USE — RESEARCH PROTOTYPE ONLY
   </div>
   
   <div class="container">
     <div class="header">
-      <h1>🧠 SurgicalAI — Photo Analysis</h1>
+      <h1>🧠 SurgicalAI — Advanced Surgical Planning</h1>
+      <p class="subtitle">AI-Powered Diagnosis • Guideline-Based Margins • RSTL Analysis • Flap Planning</p>
     </div>
     
     <div class="main-content">
-      <!-- Left Column: Image & Preview -->
+      <!-- Left Column: Image & Input -->
       <div class="left-column">
-        <div class="form-group">
-          <label>Patient Image</label>
+        <div class="panel">
+          <h2>Patient Image</h2>
           <div id="dropArea" class="drop-area">
             <p>Drag and drop an image here or click to select</p>
             <input type="file" id="imageUpload" accept="image/jpeg, image/png" style="display: none" />
             <img id="imagePreview" class="image-preview" />
           </div>
         </div>
-      </div>
-      
-      <!-- Right Column: Form & Results -->
-      <div class="right-column">
-        <div class="input-panel">
+        
+        <div class="panel">
           <h2>Patient Data</h2>
           
-          <!-- Patient Info -->
           <div class="form-group">
             <label for="site">Facial Subunit</label>
             <select id="site" required>
               <option value="" disabled selected>Select facial subunit...</option>
+              <option value="forehead">Forehead</option>
+              <option value="temple">Temple</option>
+              <option value="periorbital_upper">Upper Eyelid</option>
+              <option value="periorbital_lower">Lower Eyelid</option>
+              <option value="medial_canthal">Medial Canthal</option>
+              <option value="nasal_dorsum">Nasal Dorsum</option>
+              <option value="nasal_tip">Nasal Tip</option>
+              <option value="alar">Alar</option>
+              <option value="nasolabial_fold">Nasolabial Fold</option>
+              <option value="cheek_medial">Medial Cheek</option>
+              <option value="cheek_lateral">Lateral Cheek</option>
+              <option value="lip_upper">Upper Lip</option>
+              <option value="lip_lower">Lower Lip</option>
+              <option value="chin">Chin</option>
+              <option value="ear">Ear</option>
             </select>
           </div>
           
@@ -58,7 +70,7 @@
           <div class="form-group">
             <label>
               <input type="checkbox" id="priorHistology" />
-              Prior Histology
+              Prior Histology Available
             </label>
           </div>
           
@@ -72,46 +84,94 @@
           <div class="form-group">
             <label>
               <input type="checkbox" id="recurrent" />
-              Recurrent
+              Recurrent Lesion
             </label>
           </div>
           
-          <button id="analyzeBtn" disabled>Analyze</button>
+          <button id="analyzeBtn" disabled>🔬 Analyze</button>
           <p class="disclaimer">Research prototype — not for clinical use</p>
         </div>
-        
-        <div class="results-panel">
+      </div>
+      
+      <!-- Right Column: Results -->
+      <div class="right-column">
+        <div class="progress-panel">
           <div id="progressSteps" class="progress-steps">
             Waiting for input...
           </div>
+        </div>
+        
+        <div id="resultsContainer" style="display: none;">
+          <!-- Ensemble Diagnosis Panel -->
+          <div class="panel" id="diagnosisPanel">
+            <h2>🎯 Ensemble Diagnosis</h2>
+            <div id="topDiagnoses" class="diagnosis-grid"></div>
+            <div id="uncertaintyInfo" class="uncertainty-panel"></div>
+            <div id="featureExplanations" class="feature-explanations"></div>
+          </div>
           
-          <div id="resultsPanel" style="display: none;">
-            <div class="results-section">
-              <h3 class="section-title">Classification Results</h3>
-              <div id="probabilitiesContainer"></div>
-            </div>
-            
-            <div class="results-section">
-              <h3 class="section-title">Oncology Gate Decision</h3>
-              <p id="gateDecision"></p>
-            </div>
-            
-            <div class="results-section">
-              <h3 class="section-title">Visualizations</h3>
-              <div id="artifacts"></div>
-            </div>
+          <!-- Guideline-Based Margins Panel -->
+          <div class="panel" id="marginsPanel">
+            <h2>📏 Guideline-Based Margins</h2>
+            <div id="marginCalculation" class="margin-calculation"></div>
+            <div id="guidelines" class="guidelines-info"></div>
+            <div id="citations" class="citations-list"></div>
+          </div>
+          
+          <!-- RSTL Analysis Panel -->
+          <div class="panel" id="rstlPanel">
+            <h2>🧭 RSTL Analysis</h2>
+            <div id="landmarkInfo" class="landmark-info"></div>
+            <div id="headPose" class="head-pose-info"></div>
+            <div id="excisionAlignment" class="excision-alignment"></div>
+          </div>
+          
+          <!-- Flap Planning Panel -->
+          <div class="panel" id="flapPanel">
+            <h2>🔧 Reconstruction Planning</h2>
+            <div id="recommendedFlap" class="flap-recommendation"></div>
+            <div id="alternativeFlaps" class="alternative-flaps"></div>
+            <div id="technicalNotes" class="technical-notes"></div>
+            <div id="warnings" class="warnings-list"></div>
+          </div>
+          
+          <!-- Safety Gates Panel -->
+          <div class="panel" id="safetyPanel">
+            <h2>⚠️ Safety Assessment</h2>
+            <div id="oncologyGate" class="oncology-gate"></div>
+            <div id="riskFactors" class="risk-factors"></div>
+            <div id="contraindications" class="contraindications"></div>
+          </div>
+          
+          <!-- Visualizations Panel -->
+          <div class="panel" id="visualizationsPanel">
+            <h2>🖼️ Enhanced Visualizations</h2>
+            <div id="overlayImages" class="overlay-grid"></div>
+            <div id="rstlOverlay" class="rstl-visualization"></div>
           </div>
         </div>
       </div>
     </div>
   </div>
   
-  <!-- Toast for error messages -->
+  <!-- Enhanced Toast System -->
   <div id="toast" class="toast"></div>
+  
+  <!-- Loading Modal -->
+  <div id="loadingModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="loader"></div>
+      <p>Analyzing image with AI ensemble...</p>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
   
   <!-- Footer -->
   <footer class="footer">
     <p>© Dr. Mehdi Ghorbani Karimabad — Plastic, Reconstructive & Aesthetic Surgery</p>
+    <p class="version">SurgicalAI v2.0 - Advanced Surgical Planning System</p>
   </footer>
   
   <script src="api.js"></script>
