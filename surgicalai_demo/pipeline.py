@@ -135,7 +135,7 @@ def run_demo(
     }
     metrics_mm = defect_metrics_px_to_mm(metrics_px, mm_per_px) if mm_per_px else None
 
-    # 5) Tier‑0 triage — returns STRING label; never access .label
+    # 5) Tier‑0 triage — returns STRING label; use directly without attribute access
     tri_label = triage_tier0(abcde, age=meta["age"], body_site=meta["body_site"])
     
     # 6) Very simple class probs for planner (demo safe)
@@ -188,7 +188,7 @@ def run_demo(
 
     summary: Dict[str, Any] = {
           "triage": {
-            "label": str(tri_label),   # ← IMPORTANT: string, no .label access
+            "label": str(tri_label),
         },
         "probs": probs,
         "plan": plan,
