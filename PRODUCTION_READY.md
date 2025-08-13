@@ -255,5 +255,14 @@ curl http://localhost:7860/api/healthz
 python test_basic_system.py
 ```
 
----
 **🎉 SYSTEM READY FOR PRODUCTION DEMO** 🎉
+
+## Dashboard UX
+
+The dashboard uses Tailwind (CDN) and Alpine.js with a small API client. Theming is handled via CSS variables on the html element and a theme-* class for compatibility with existing styles.
+
+- Theme tokens: --bg, --card, --text, --muted, --border, --accent, --accent-contrast, --ring
+- Themes: light, dark, clinic (accent #2fa58c on #f7faf9 background)
+- Persistence: localStorage key surgicalai_theme
+
+Port auto-detection: the client computes API_BASE as protocol + hostname + :7860 by default and allows overriding via window.SURGICALAI_API_BASE. All client fetches use this base. CORS allows localhost/127.0.0.1 on ports 8000/5173/8080 for easy local serving from static file servers or dev servers.

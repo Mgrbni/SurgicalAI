@@ -98,7 +98,14 @@ app = FastAPI(title="SurgicalAI API")
 # CORS (be permissive for demo; lock down in prod)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://localhost:5173", "http://127.0.0.1:8000", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:8000",
+        "http://localhost:5173",
+        "http://localhost:8080",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8080",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -140,6 +147,72 @@ def get_facial_subunits():
     for value, label in FACIAL_SUBUNIT_LABELS.items():
         subunits.append({"value": value, "label": label})
     return {"subunits": subunits}
+
+@app.get("/api/last-usage")
+async def get_last_usage(limit: int = 10):
+    """Get recent usage logs"""
+    try:
+        # Mock implementation for now - in production this would read from a database
+        import glob
+        import os
+        from pathlib import Path
+        
+        runs = []
+        if RUNS_ROOT.exists():
+            run_dirs = sorted(RUNS_ROOT.glob("*"), key=lambda x: x.stat().st_mtime, reverse=True)[:limit]
+            
+            for run_dir in run_dirs:
+                if run_dir.is_dir():
+                    try:
+                        # Try to read analysis results
+                        analysis_file = run_dir / 'analysis.json'
+                        metrics_file = run_dir / 'metrics.json'
+                        
+                        entry = {
+                            "id": run_dir.name,
+                            "request_id": run_dir.name,
+                            "timestamp": datetime.fromtimestamp(run_dir.stat().st_mtime).isoformat(),
+                            "time": datetime.fromtimestamp(run_dir.stat().st_mtime).isoformat(),
+                            "success": True,
+                            "subunit": "unknown",
+                            "primary_diagnosis": "unknown",
+                            "provider": "unknown",
+                            "model": "unknown"
+                        }
+                        
+                        if analysis_file.exists():
+                            try:
+                                import json
+                                with open(analysis_file, 'r') as f:
+                                    analysis = json.load(f)
+                                entry.update({
+                                    "primary_diagnosis": analysis.get("primary_dx", "unknown"),
+                                    "subunit": analysis.get("site", "unknown")
+                                })
+                            except Exception:
+                                pass
+                        
+                        if metrics_file.exists():
+                            try:
+                                import json
+                                with open(metrics_file, 'r') as f:
+                                    metrics = json.load(f)
+                                entry.update({
+                                    "provider": metrics.get("analysis", {}).get("provider", "unknown"),
+                                    "model": metrics.get("analysis", {}).get("model", "unknown"),
+                                    "subunit": metrics.get("input", {}).get("subunit", entry["subunit"])
+                                })
+                            except Exception:
+                                pass
+                        
+                        runs.append(entry)
+                    except Exception:
+                        continue
+        
+        return runs
+    except Exception as e:
+        logger.warning(f"Failed to get usage logs: {e}")
+        return []
 
 def _generate_run_id() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
@@ -214,8 +287,17 @@ async def analyze_lesion(
     
     try:
         payload_data = json.loads(payload)
+        logger.info(f"Payload data: {payload_data}")
         lesion_request = LesionRequest(**payload_data)
+        logger.info(f"Validated lesion request: {lesion_request}")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {e}")
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=f"Validation error: {e}")
     except Exception as e:
+        logger.error(f"Payload processing error: {e}")
         raise HTTPException(status_code=400, detail=f"Invalid payload: {e}")
 
     run_id = _generate_run_id()

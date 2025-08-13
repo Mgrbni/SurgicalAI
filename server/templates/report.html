@@ -22,9 +22,9 @@
       <div>
         <h2>Probabilities</h2>
         <ul class="bars">
-          {% for label, p in probs.items() %}
+          {% for label, p in metrics.ordered_probabilities if metrics else probs.items() %}
           <li>
-            <span class="label">{{ label|capitalize }}</span>
+            <span class="label">{{ label|replace('_', ' ')|capitalize }}</span>
             <div class="bar"><span style="width: {{ (p*100)|round(1) }}%"></span></div>
             <span class="val">{{ (p*100)|round(1) }}%</span>
           </li>
@@ -34,8 +34,16 @@
       <div>
         <h2>Oncology Gate</h2>
         <div class="chip {{ gate.status|lower }}">{{ gate.status }}</div>
-        <p class="reason">{{ gate.reason }}</p>
+        <p class="reason">{{ gate.notes or gate.reason }}</p>
         {% if gate.guidance %}<p class="guidance">{{ gate.guidance }}</p>{% endif %}
+        
+        {% if metrics.reconstruction_text %}
+        <div class="reconstruction">
+            <h3>Reconstruction Plan</h3>
+            <p><strong>Choice:</strong> {{ metrics.reconstruction_choice|replace('_', ' ')|capitalize }}</p>
+            <p>{{ metrics.reconstruction_text }}</p>
+        </div>
+        {% endif %}
       </div>
     </div>
   </section>
@@ -58,14 +66,47 @@
     </div>
   </section>
 
-  {% if metrics %}
+  {% if metrics.guidelines %}
   <section>
-    <h1>Metrics</h1>
-    <table class="kv">
-      {% for k, v in metrics.items() %}
-      <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+    <h1>Clinical Guidelines</h1>
+    <div class="guidelines">
+      {% for g in metrics.guidelines %}
+      <div class="guideline">
+        <h3>{{ g.diagnosis|replace('_', ' ')|capitalize }}</h3>
+        <p><strong>Excision Margin:</strong> {{ g.margin }}</p>
+        <p>{{ g.summary }}</p>
+      </div>
       {% endfor %}
-    </table>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if metrics.risk_factors %}
+  <section>
+    <h1>Patient & Lesion Factors</h1>
+    <div class="grid-2">
+        <div>
+            <h2>Risk Factors</h2>
+            <ul class="kv-list">
+              {% for k, v in metrics.risk_factors.items() %}
+              <li><strong>{{ k|replace('_', ' ')|capitalize }}:</strong> {{ v }}</li>
+              {% endfor %}
+            </ul>
+        </div>
+        {% if metrics.lesion_center or metrics.incision_angle %}
+        <div>
+            <h2>Lesion Details</h2>
+            <ul class="kv-list">
+                {% if metrics.lesion_center %}
+                <li><strong>Center:</strong> ({{ metrics.lesion_center[0] }}, {{ metrics.lesion_center[1] }}) px</li>
+                {% endif %}
+                {% if metrics.incision_angle %}
+                <li><strong>Incision Angle:</strong> {{ metrics.incision_angle|round(1) }}°</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
   </section>
   {% endif %}
 </main>

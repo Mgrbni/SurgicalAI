@@ -1,0 +1,136 @@
+# SurgicalAI Clinical Knowledge (parameters, thresholds, and lookups only)
+
+meta:
+  version: 0.1.0
+  updated: 2025-08-12
+
+sources:
+  - id: nccn_melanoma_2024
+    title: NCCN Guidelines – Cutaneous Melanoma
+    year: 2024
+    note: Margin ranges and sentinel node indications
+  - id: nccn_bcc_scc_2024
+    title: NCCN Guidelines – Basal Cell & Squamous Cell Carcinoma
+    year: 2024
+    note: Risk stratification, margins, Mohs indications
+  - id: aad_bcc_2023
+    title: AAD Guidelines – Management of Basal Cell Carcinoma
+    year: 2023
+  - id: bad_scc_2020
+    title: BAD Guidelines – Cutaneous Squamous Cell Carcinoma
+    year: 2020
+  - id: grabb_smith_8e
+    title: Grabb & Smith’s Plastic Surgery, 8th ed.
+    year: 2019
+    section: Facial flaps; forehead/nasolabial/paramedian techniques
+  - id: papadopoulos_fprs
+    title: Facial Plastic and Reconstructive Surgery
+    year: 2015
+    section: RSTL, subunits, flap design parameters
+
+h_zone:
+  subunits: [nose_tip, nose_dorsum, nose_ala, canthus_medial, canthus_lateral, eyelid_upper, eyelid_lower, lip_upper, lip_lower, ear_helix, ear_lobe]
+  cite: nccn_bcc_scc_2024
+
+rstl_angles_deg:
+  # Approximate relaxed skin tension line orientation per subunit (degrees from horizontal)
+  forehead: 90
+  temple: 45
+  eyebrow: 15
+  eyelid_upper: 10
+  eyelid_lower: 10
+  canthus_medial: 25
+  canthus_lateral: 25
+  nose_dorsum: 90
+  nose_tip: 0
+  nose_ala: 30
+  cheek_medial: 60
+  cheek_lateral: 30
+  zygomatic: 30
+  lip_upper: 90
+  lip_lower: 90
+  philtrum: 90
+  chin: 45
+  jawline: 15
+  ear_helix: 25
+  ear_lobe: 20
+  parotid_region: 30
+  neck_anterior: 90
+  cite: papadopoulos_fprs
+
+margins_mm:
+  melanoma:
+    # WLE margins by Breslow thickness (approximate standard ranges)
+    in_situ: 5
+    le_1mm: 10
+    gt_1_to_2mm: 10
+    gt_2_to_4mm: 20
+    gt_4mm: 20
+    sentinel_node_biopsy_threshold_mm: 0.8
+    cite: nccn_melanoma_2024
+  bcc:
+    low_risk: 3
+    high_risk: 5
+    mohs_indications: [h_zone, ill_defined, recurrent]
+    cite: aad_bcc_2023
+  scc:
+    low_risk: 4
+    high_risk: 6
+    very_high_risk: 10
+    mohs_indications: [h_zone, high_risk_features]
+    cite: bad_scc_2020
+  benign:
+    default: 2
+    cite: grabb_smith_8e
+
+flaps:
+  rotation:
+    indications: [cheek_medial, cheek_lateral, temple, chin]
+    params:
+      arc_deg_default: 60
+      base_width_factor: 1.5  # x defect diameter
+    pitfalls: [dog_ear, distal_congestion]
+    cite: grabb_smith_8e
+  limberg:
+    indications: [cheek_lateral, zygomatic]
+    params:
+      rhombus_angle_deg: 60
+    pitfalls: [tip_necrosis]
+    cite: grabb_smith_8e
+  bilobed:
+    indications: [nose_tip, nose_dorsum]
+    params:
+      primary_lobe_angle_deg: 45
+      secondary_lobe_angle_deg: 90
+      lobe_ratio: 1.0
+    pitfalls: [pincushioning]
+    cite: papadopoulos_fprs
+  v_y:
+    indications: [eyelid_lower, eyelid_upper, lip_lower, lip_upper]
+    params:
+      advancement_factor: 1.0
+    pitfalls: [mucosal_eversion]
+    cite: grabb_smith_8e
+  nasolabial:
+    indications: [nose_ala, upper_lip, lower_lip]
+    cite: grabb_smith_8e
+  paramedian_forehead:
+    indications: [nose_tip, nose_ala]
+    pitfalls: [supratrochlear_injury]
+    cite: grabb_smith_8e
+
+gates:
+  melanoma_defer_threshold: 0.5  # if melanoma probability >= threshold, defer flap for WLE/Mohs
+  h_zone_high_risk_defer: true
+  risk_modifiers:
+    recurrent: 0.15
+    ill_defined_borders: 0.10
+    smoker: 0.10
+    irradiated: 0.20
+  cite: nccn_bcc_scc_2024
+
+citations_strings:
+  melanoma_margins: "NCCN Melanoma (2024): WLE margins 5–20 mm by Breslow; SLNB ≥0.8 mm."
+  bcc_mohs: "NCCN/AAD BCC (2023–2024): Margins 3–5 mm; Mohs for H-zone, ill-defined, recurrent."
+  scc_margins: "BAD/NCCN SCC: Margins 4–6+ mm by risk; consider Mohs for high-risk or critical sites."
+  flap_refs: "Grabb & Smith (2019), Papadopoulos (2015): Facial flap design parameters."

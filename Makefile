@@ -1,4 +1,8 @@
-# Makefile
+.PHONY: quickcheck demo fmt
+quickcheck: ; python -m pip install -e ".[dev]" && pytest -q
+demo: ; surgicalai demo assets/demo_face.jpg --out out
+fmt: ; ruff check --fix . && black .
+# SurgicalAI Makefile - Development and Production Tasks
 PY := python3
 VENV := .venv
 PIP := $(VENV)/bin/pip
@@ -12,86 +16,112 @@ ifeq ($(OS),Windows_NT)
   PYTHON := $(VENV)/Scripts/python.exe
 endif
 
-.PHONY: all install clean lint test server client api
+.PHONY: help venv install dev demo test lint typecheck clean docker
 
-all: install server client
+# Default target
+help:
+	@echo "SurgicalAI Development Commands:"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make venv        - Create virtual environment"
+	@echo "  make install     - Install dependencies"
+	@echo "  make dev         - Start development server"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make demo        - Run end-to-end demo"
+	@echo "  make test        - Run all tests"
+	@echo "  make lint        - Run linting"
+	@echo "  make typecheck   - Run type checking"
+	@echo ""
+	@echo "Production:"
+	@echo "  make docker      - Build Docker image"
+	@echo "  make clean       - Clean build artifacts"
 
+# Virtual environment setup
+venv:
+	@echo "Creating virtual environment..."
+	$(PY) -m venv $(VENV)
+	@echo "Virtual environment created in $(VENV)/"
+	@echo "Run 'make install' next"
+
+# Install dependencies
+install:
+	@echo "Installing dependencies..."
+	$(PIP) install --upgrade pip wheel
+	$(PIP) install -r requirements.txt
+	$(PIP) install -e .[dev]
+	@echo "Dependencies installed successfully"
+
+# Development server (new clean API)
+dev:
+	@echo "Starting SurgicalAI development server..."
+	@echo "Server will be available at: http://localhost:8000"
+	@echo "Press Ctrl+C to stop"
+	$(PYTHON) -m uvicorn server.app:app --reload --host 0.0.0.0 --port 8000
+
+# Legacy server compatibility
 server:
 	$(PYTHON) -m uvicorn server.api_simple:app --port 8000 --reload
 
 api:
 	$(PYTHON) -m uvicorn server.api_advanced:app --reload --port 7860
 
-client:
-	$(PYTHON) -m http.server 5173 -d client
+# End-to-end demo
+demo: install
+	@echo "Running SurgicalAI demo..."
+	$(PYTHON) demo_complete.py
+	@echo "Demo completed. Check runs/ directory for results."
 
+# Run tests
+test:
+	@echo "Running tests..."
+	$(PYTHON) -m pytest tests/ -v --cov=server --cov-report=html
+	@echo "Test coverage report generated in htmlcov/"
+
+# Linting
+lint:
+	@echo "Running linting..."
+	$(PIP) install ruff >/dev/null 2>&1 || true
+	$(PYTHON) -m ruff check server/ --fix
+	$(PYTHON) -m ruff format server/
+
+# Type checking
+typecheck:
+	@echo "Running type checks..."
+	$(PIP) install mypy >/dev/null 2>&1 || true
+	$(PYTHON) -m mypy server/ --ignore-missing-imports
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning build artifacts..."
+	rm -rf $(VENV) build dist *.egg-info runs/ui __pycache__ .pytest_cache .mypy_cache .ruff_cache htmlcov
+	find . -name "*.pyc" -delete
+	find . -name "__pycache__" -delete
+	@echo "Clean completed"
+
+# Docker build
+docker:
+	@echo "Building Docker image..."
+	docker build -t surgicalai:latest -f Dockerfile .
+	@echo "Docker image built: surgicalai:latest"
+	@echo "Run with: docker run -p 8000:8000 surgicalai:latest"
+
+# Production deployment preparation
+prod-check: lint typecheck test
+	@echo "Production readiness check..."
+	@echo "✓ Linting passed"
+	@echo "✓ Type checking passed"  
+	@echo "✓ Tests passed"
+	@echo "Ready for production deployment"
+
+# Legacy demo compatibility
 demo_cli: install
 	@echo "==> Running legacy SurgicalAI CLI demo"
-	$(PYTHON) -m surgicalai.cli demo --out runs/demo
+	$(PYTHON) -m surgicalai.cli demo --out runs/demo || echo "Legacy CLI not available"
 	@echo "==> Done. Outputs in runs/demo/"
-
-# New demo: start API + static client and perform health check
-demo: install
-	@echo "==> Launching SurgicalAI server (advanced) + client"
-	-start "surgicalai_api" $(PYTHON) -m uvicorn server.api_simple:app --port 8000 --reload
-	-start "surgicalai_client" $(PYTHON) -m http.server 5173 -d client
-	@echo "Waiting for server to start..." && $(PYTHON) -c "import time; time.sleep(3)"
-	@echo "==> Health check" && curl -fsS http://localhost:8000/api/health || (echo "Health check failed" && exit 1)
-	@echo "Open http://localhost:5173 in your browser to use the demo"
 
 # Enhanced demo: run multimodel consensus + PDF generation on sample image
 consensus_demo: install
 	@echo "==> Running dual-model consensus demo"
-	$(PYTHON) - <<"PYEOF"
-from pathlib import Path
-import json
-import cv2
-from surgicalai_demo.multimodel import locate_lesion
-from surgicalai_demo.guidelines import plan
-from surgicalai_demo.risk_factors import adjust_probs
-from surgicalai_demo.langer_lines import analyze_orientation_and_closure
-import yaml
-
-out = Path('runs/demo')
-out.mkdir(parents=True, exist_ok=True)
-img_path = Path('data') / 'sample.jpg'
-if not img_path.exists():
-    # fallback: pick any jpg
-    for p in Path('data').rglob('*.jpg'):
-        img_path = p; break
-img = cv2.imread(str(img_path))
-res = locate_lesion(img, out)
-# Mock priors
-priors = {"melanoma":0.2,"bcc":0.2,"scc":0.1,"nevus":0.3,"seborrheic_keratosis":0.15,"benign_other":0.05}
-adj = adjust_probs(priors, {"uv_exposure":"high"})
-rules = yaml.safe_load(open('data/oncology_rules.yaml','r',encoding='utf-8'))
-center = tuple(res['consensus']['center'])
-plan_dx = 'nevus_compound'
-closure = analyze_orientation_and_closure('upper_lip', center, 6.0, rules)
-plan_out = plan(plan_dx, 'upper_lip', 6.0, borders_clear=True, breslow_mm=None)
-json.dump({"consensus":res, "adjusted":adj.posteriors, "closure":closure.__dict__, "plan":plan_out.__dict__}, open(out/'demo_summary.json','w'), indent=2)
-print('Wrote runs/demo/demo_summary.json')
-PYEOF
+	$(PYTHON) verify_advanced_system.py
 	@echo "==> Done. See runs/demo"
-
-install:
-	@echo "==> Creating venv and installing deps (runtime + dev)"
-	$(PY) -m venv $(VENV)
-	$(PIP) install --upgrade pip wheel
-	$(PIP) install -r requirements.txt
-	# Editable install with dev extras
-	$(PIP) install -e .[dev]
-	-$(PIP) install mediapipe || true
-
-lint:
-	@echo "==> Lint (ruff) and format check (black)"; \
-	$(PIP) install ruff black >/dev/null; \
-	$(VENV)/bin/ruff check surgicalai || true; \
-	$(VENV)/bin/black --check surgicalai || true
-
-test:
-	@echo "==> Running tests"
-	$(PYTHON) -m pytest tests/
-
-clean:
-	rm -rf $(VENV) build dist *.egg-info runs/ui

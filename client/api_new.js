@@ -3,10 +3,17 @@
  * Implements the new structured API contract
  */
 
-// Auto-detect API base URL (prefer same-origin)
+// Auto-detect API base URL
 function getApiBase() {
-    // Prefer same-origin to avoid port mismatches
-    return window.location.origin;
+    const { protocol, hostname, port } = window.location;
+    
+    // If served from the same server as the API, use same origin
+    if (port === '8000' || port === '7860') {
+        return `${protocol}//${hostname}:${port}`;
+    }
+    
+    // Default to local development server
+    return `${protocol}//${hostname}:8000`;
 }
 
 const API_BASE = window.SURGICALAI_API_BASE || getApiBase();
@@ -38,9 +45,7 @@ class SurgicalAI {
                 recurrent_tumor: options.recurrentTumor || false,
                 prior_histology: options.priorHistology || false
             },
-            offline: options.offline || false,
-            provider: options.provider || null,
-            model: options.model || null
+            offline: options.offline || false
         };
         
         formData.append('payload', JSON.stringify(payload));
@@ -101,33 +106,6 @@ class SurgicalAI {
             json: result,
             artifacts: this.processArtifacts(result.artifacts || {})
         };
-    }
-
-    /**
-     * Minimal clinical triage endpoint.
-     */
-    async triage({ imageBase64, roiPolygon, site, age, sex, risks = {}, offline = true }) {
-        const payload = {
-            image_base64: imageBase64,
-            roi_polygon: roiPolygon,
-            site,
-            age,
-            sex,
-            risks,
-            offline
-        };
-        const response = await fetch(`${this.baseUrl}/api/triage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) {
-            const err = await this.handleError(response);
-            throw err;
-        }
-        const json = await response.json();
-        const requestId = response.headers.get('X-Request-ID');
-        return { json, requestId };
     }
 
     /**

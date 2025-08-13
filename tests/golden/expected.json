@@ -1,0 +1,3 @@
+{
+  "keys": ["ok", "diagnosis_top3", "probs", "bbox", "rstl_angle_deg", "flap_candidates", "artifacts"]
+}

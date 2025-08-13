@@ -1,1446 +1,401 @@
+...existing code...
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SurgicalAI - Professional Dashboard</title>
-    
-    <!-- External Dependencies -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="styles.css">
-    
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SurgicalAI — Minimal Dashboard</title>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        
-        /* Theme Variables */
-        :root {
-            --bg: #ffffff;
-            --card: #f8fafc;
-            --muted: #f1f5f9;
-            --text: #1e293b;
-            --accent: #3b82f6;
-            --accent-contrast: #ffffff;
-            --ring: #3b82f6;
-            --border: #e2e8f0;
+        :root{
+            --bg:#0b0f14; --card:#10161d; --soft:#15202b; --muted:#1b2733; --text:#e6eef6; --sub:#9fb3c8; --accent:#3fb950; --danger:#e5534b; --warn:#ffb100; --border:#22303c;
         }
-        
-        [data-theme="dark"] {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --muted: #334155;
-            --text: #f1f5f9;
-            --accent: #06b6d4;
-            --accent-contrast: #ffffff;
-            --ring: #06b6d4;
-            --border: #475569;
-        }
-        
-        [data-theme="clinic"] {
-            --bg: #f7faf9;
-            --card: #ffffff;
-            --muted: #f0f4f3;
-            --text: #1f2937;
-            --accent: #2fa58c;
-            --accent-contrast: #ffffff;
-            --ring: #2fa58c;
-            --border: #d1d5db;
-        }
-        
-        html {
-            background-color: var(--bg);
-            color: var(--text);
-        }
-        
-        .card {
-            background-color: var(--card);
-            border-color: var(--border);
-        }
-        
-        .btn-primary {
-            background-color: var(--accent);
-            color: var(--accent-contrast);
-        }
-        
-        .btn-primary:hover {
-            opacity: 0.9;
-        }
-        
-        .progress-spinner {
-            border: 3px solid var(--muted);
-            border-top: 3px solid var(--accent);
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .toast {
-            animation: slideIn 0.3s ease-out;
-        }
+        html,body{height:100%}
+        body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial}
+        .wrap{max-width:1080px;margin:0 auto;padding:16px}
+        header{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+        header h1{margin:0;font-size:18px}
+        header .badge{font-size:11px;background:#341d1d;color:#ffb4b4;border:1px solid #4a2626;border-radius:12px;padding:2px 8px;margin-left:8px}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        <!doctype html>
+        .card{background:var(--card);border:1px solid var(--border);border-radius:12px}
+        .card .hd{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:600}
+        .card .bd{padding:14px}
+        .btn{cursor:pointer;border:1px solid var(--border);background:var(--soft);color:var(--text);padding:8px 12px;border-radius:8px}
+        .btn[disabled]{opacity:.5;cursor:not-allowed}
+        .btn.primary{background:var(--accent);border-color:#2e7b3a;color:#07130a}
+        .btn.danger{background:#3a1613;border-color:#5b2520;color:#ffcac7}
+        .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .row + .row{margin-top:8px}
+        label.small{font-size:12px;color:var(--sub)}
+        input, select{background:var(--soft);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;width:100%}
+        .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .drop{border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;color:var(--sub)}
+        .canvasWrap{position:relative;background:var(--soft);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+        #canvas{display:block;width:100%;height:auto;cursor:crosshair}
+        .hint{font-size:12px;color:var(--sub)}
+        .bar{height:8px;background:#22303c;border-radius:999px;overflow:hidden}
+        .bar > span{display:block;height:100%;background:var(--accent)}
+        .pill{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:var(--soft);color:var(--sub);font-size:12px}
+        .toast{position:fixed;top:12px;right:12px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);padding:10px 12px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.3);z-index:50}
+        .toast.err{border-left-color:var(--danger)}
+        footer{opacity:.7;font-size:12px;padding:12px 0}
+        .small{font-size:12px;color:var(--sub)}
+        .space{height:8px}
     </style>
 </head>
-<body class="min-h-screen" style="background-color: var(--bg);" x-data="app()">
-    <!-- Header (sticky) -->
-    <header class="sticky top-0 z-50 card border-b shadow-sm" style="background-color: var(--card); border-color: var(--border);">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
-                <!-- Left: Title & Badge -->
-                <div class="flex items-center space-x-4">
-                    <h1 class="text-2xl font-bold" style="color: var(--text);">SurgicalAI</h1>
-                    <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        Not for clinical use
-                    </span>
-                    <!-- Provider/Model Pill -->
-                    <div x-show="health.provider" class="hidden sm:flex items-center px-3 py-1 rounded-full text-xs" 
-                         style="background-color: var(--muted); color: var(--text);">
-                        <span x-text="health.provider + '/' + health.model"></span>
-                        <div x-show="health.fallback" class="ml-2 w-2 h-2 bg-yellow-400 rounded-full" title="Fallback active"></div>
+<body>
+    <div class="wrap">
+        <header>
+            <div class="row">
+                <h1>SurgicalAI</h1>
+                <span class="badge">Not for clinical use</span>
+            </div>
+            <div id="health" class="small">health: <span>checking…</span></div>
+        </header>
+
+        <div class="grid">
+            <section class="card">
+                <div class="hd">Image and ROI</div>
+                <div class="bd">
+                    <div class="drop" id="drop">
+                        <input id="file" type="file" accept="image/*" style="display:none">
+                        <div id="dropMsg">Drop image here or click to choose</div>
+                    </div>
+                    <div class="space"></div>
+                    <div class="canvasWrap">
+                        <canvas id="canvas"></canvas>
+                    </div>
+                    <div class="row" style="margin-top:8px">
+                        <button class="btn" id="startPoly">Start polygon</button>
+                        <button class="btn" id="finishPoly">Finish</button>
+                        <button class="btn danger" id="clearPoly">Clear</button>
+                        <span class="hint">Click on the image to add vertices. Minimum 3 points.</span>
                     </div>
                 </div>
-                
-                <!-- Right: Controls -->
-                <div class="flex items-center space-x-3">
-                    <!-- Theme Switcher -->
-                    <div class="flex items-center space-x-1 p-1 rounded-lg" style="background-color: var(--muted);">
-                        <button x-on:click="setTheme('light')" 
-                                class="p-2 rounded-md text-sm transition-colors flex items-center space-x-2"
-                                :class="theme === 'light' ? 'bg-white shadow-sm' : 'hover:bg-white/50'"
-                                aria-label="Light theme">
-                            <i data-lucide="sun" class="w-4 h-4"></i>
-                            <span class="hidden sm:inline">Light</span>
-                        </button>
-                        <button x-on:click="setTheme('dark')" 
-                                class="p-2 rounded-md text-sm transition-colors flex items-center space-x-2"
-                                :class="theme === 'dark' ? 'bg-white shadow-sm' : 'hover:bg-white/50'"
-                                aria-label="Dark theme">
-                            <i data-lucide="moon" class="w-4 h-4"></i>
-                            <span class="hidden sm:inline">Dark</span>
-                        </button>
-                        <button x-on:click="setTheme('clinic')" 
-                                class="p-2 rounded-md text-sm transition-colors flex items-center space-x-2"
-                                :class="theme === 'clinic' ? 'bg-white shadow-sm' : 'hover:bg-white/50'"
-                                aria-label="Clinic theme">
-                            <i data-lucide="heart-pulse" class="w-4 h-4"></i>
-                            <span class="hidden sm:inline">Clinic</span>
-                        </button>
+            </section>
+
+            <section class="card">
+                <div class="hd">Parameters</div>
+                <div class="bd">
+                    <div class="row">
+                        <label class="small" for="site">Facial subunit</label>
+                        <select id="site">
+                            <option value="">Select…</option>
+                            <option value="forehead">Forehead</option>
+                            <option value="temple">Temple</option>
+                            <option value="cheek_medial">Medial Cheek</option>
+                            <option value="cheek_lateral">Lateral Cheek</option>
+                            <option value="nose_dorsum">Nasal Dorsum</option>
+                            <option value="nose_tip">Nasal Tip</option>
+                            <option value="nose_ala">Nasal Ala</option>
+                            <option value="lip_upper">Upper Lip</option>
+                            <option value="lip_lower">Lower Lip</option>
+                            <option value="chin">Chin</option>
+                        </select>
                     </div>
-                    
-                    <!-- Settings -->
-                    <button x-on:click="showSettings = true" 
-                            class="p-2 rounded-md hover:bg-gray-100 transition-colors"
-                            aria-label="Settings">
-                        <i data-lucide="settings" class="w-4 h-4"></i>
-                    </button>
-                    
-                    <!-- Logs -->
-                    <button x-on:click="showLogs = true" 
-                            class="p-2 rounded-md hover:bg-gray-100 transition-colors"
-                            aria-label="Logs">
-                        <i data-lucide="file-text" class="w-4 h-4"></i>
-                    </button>
-                    
-                    <!-- Help -->
-                    <button x-on:click="showHelp = true" 
-                            class="p-2 rounded-md hover:bg-gray-100 transition-colors"
-                            aria-label="Help">
-                        <i data-lucide="help-circle" class="w-4 h-4"></i>
-                    </button>
-                    
-                    <!-- Language Toggle -->
-                    <button x-on:click="toggleLanguage()" 
-                            class="px-3 py-1 text-sm rounded-md border transition-colors"
-                            style="border-color: var(--border); color: var(--text);">
-                        <span x-text="language"></span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Progress & Status -->
-        <div x-show="analyzing" class="mb-6 card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-            <div class="flex items-center space-x-4">
-                <div class="progress-spinner"></div>
-                <div>
-                    <p class="font-semibold" style="color: var(--text);" x-text="t('analyzing')"></p>
-                    <p class="text-sm" style="color: var(--text); opacity: 0.7;" x-text="statusMessage"></p>
-                </div>
-            </div>
-            <div x-show="progress > 0" class="mt-4">
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="h-2 rounded-full transition-all duration-500" 
-                         style="background-color: var(--accent);" 
-                         :style="`width: ${progress}%`"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Left Column - Input -->
-            <div class="space-y-6">
-                <!-- Upload Card -->
-                <div class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                    <h2 class="text-lg font-semibold mb-4" style="color: var(--text);" x-text="t('upload_image')"></h2>
-                    
-                    <!-- Drag & Drop Zone -->
-                    <div x-ref="dropzone"
-                         x-on:click="$refs.fileInput.click()"
-                         x-on:dragover.prevent="dragActive = true"
-                         x-on:dragleave.prevent="dragActive = false"
-                         x-on:drop.prevent="handleDrop($event)"
-                         class="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200"
-                         :class="dragActive ? 'border-blue-400 bg-blue-50' : ''"
-                         style="border-color: var(--border);"
-                         tabindex="0"
-                         role="button"
-                         :aria-label="t('upload_image')">
-                        
-                        <input x-ref="fileInput" type="file" class="hidden" accept="image/*" 
-                               x-on:change="handleFileSelect($event)">
-                        
-                        <div x-show="!selectedFile">
-                            <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto mb-4" style="color: var(--text); opacity: 0.4;"></i>
-                            <p class="text-lg font-medium mb-2" style="color: var(--text);">Drop lesion photo here or click to upload</p>
-                            <p class="text-sm" style="color: var(--text); opacity: 0.6;">Accepts JPEG/PNG images up to 10MB</p>
-                            <p class="text-xs mt-4" style="color: var(--text); opacity: 0.4;">Images are processed securely and not stored permanently</p>
-                        </div>
-                        
-                        <div x-show="selectedFile" class="space-y-4">
-                            <img x-show="imagePreview" :src="imagePreview" class="max-h-48 mx-auto rounded-lg shadow-sm">
-                            <div class="flex items-center justify-center space-x-4">
-                                <i data-lucide="check-circle" class="w-8 h-8 text-green-500"></i>
-                                <div>
-                                    <p class="font-medium" style="color: var(--text);" x-text="selectedFile?.name"></p>
-                                    <p class="text-sm" style="color: var(--text); opacity: 0.6;" x-text="formatFileSize(selectedFile?.size)"></p>
-                                </div>
-                                <button x-on:click.stop="clearFile()" 
-                                        class="p-1 text-red-600 hover:text-red-800 transition-colors" 
-                                        :aria-label="t('clear_file')">
-                                    <i data-lucide="x" class="w-5 h-5"></i>
-                                </button>
-                            </div>
-                            <!-- Optional Crop/Zoom Section -->
-                            <div x-show="selectedFile && settings.enableCrop" class="border-t pt-4" style="border-color: var(--border);">
-                                <h4 class="text-sm font-medium mb-2" style="color: var(--text);" x-text="t('crop_zoom')"></h4>
-                                <div class="space-y-2">
-                                    <input type="range" min="0.5" max="2" step="0.1" x-model="cropZoom" 
-                                           class="w-full">
-                                    <div class="flex space-x-2">
-                                        <button class="px-3 py-1 text-xs btn-primary rounded" x-on:click="resetCrop()" x-text="t('reset')"></button>
-                                        <button class="px-3 py-1 text-xs btn-primary rounded" x-on:click="applyCrop()" x-text="t('apply')"></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="row" style="margin-top:8px">
+                        <label class="small" for="flap">Flap type</label>
+                        <select id="flap">
+                            <option value="auto">Auto (recommended)</option>
+                            <option value="v-y">V-Y</option>
+                            <option value="keystone">Keystone</option>
+                            <option value="rotation">Rotation</option>
+                            <option value="limberg">Limberg</option>
+                            <option value="bilobed">Bilobed</option>
+                            <option value="nasolabial">Nasolabial</option>
+                            <option value="paramedian_forehead">Paramedian Forehead</option>
+                        </select>
                     </div>
-                </div>
-
-                <!-- Form Fields -->
-                <div class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                    <h2 class="text-lg font-semibold mb-4" style="color: var(--text);" x-text="t('analysis_parameters')"></h2>
-                    
-                    <form x-on:submit.prevent="analyzeImage()" class="space-y-4">
-                        <!-- Site -->
+                    <div class="two" style="margin-top:8px">
                         <div>
-                            <label class="block text-sm font-medium mb-1" style="color: var(--text);" x-text="t('anatomical_site')"></label>
-                            <select x-model="formData.site" required 
-                                    class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 transition-colors"
-                                    style="background-color: var(--bg); border-color: var(--border); color: var(--text); --tw-ring-color: var(--ring);">
-                                <option value="" x-text="t('select_site')"></option>
-                                                <option value="forehead">Forehead</option>
-                                <option value="temple">Temple</option>
-                                <option value="eyelid">Eyelid</option>
-                                <option value="medial_canthal">Medial Canthal</option>
-                                <option value="nasal_tip">Nasal Tip</option>
-                                <option value="nasal_dorsum">Nasal Dorsum</option>
-                                <option value="nasal_ala">Nasal Ala</option>
-                                <option value="cheek">Cheek</option>
-                                <option value="upper_lip">Upper Lip</option>
-                                <option value="lower_lip">Lower Lip</option>
-                                <option value="ear">Ear</option>
-                                <option value="chin">Chin</option>
-                                <option value="scalp">Scalp</option>
-                                <option value="neck">Neck</option>
+                            <label class="small" for="age">Age</label>
+                            <input id="age" type="number" min="0" max="120" placeholder="e.g., 54">
+                        </div>
+                        <div>
+                            <label class="small" for="sex">Sex</label>
+                            <select id="sex">
+                                <option>Male</option>
+                                <option>Female</option>
                             </select>
                         </div>
-
-                        <!-- Suspected Type -->
-                        <div>
-                            <label class="block text-sm font-medium mb-1" style="color: var(--text);" x-text="t('suspected_type')"></label>
-                            <select x-model="formData.suspectedType" 
-                                    class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 transition-colors"
-                                    style="background-color: var(--bg); border-color: var(--border); color: var(--text); --tw-ring-color: var(--ring);">
-                                <option value="" x-text="t('let_ai_determine')"></option>
-                                <option value="melanoma">Melanoma</option>
-                                <option value="basal_cell_carcinoma">Basal Cell Carcinoma</option>
-                                <option value="squamous_cell_carcinoma">Squamous Cell Carcinoma</option>
-                                <option value="seborrheic_keratosis">Seborrheic Keratosis</option>
-                                <option value="actinic_keratosis">Actinic Keratosis</option>
-                                <option value="dermatofibroma">Dermatofibroma</option>
-                                <option value="nevus">Nevus</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-
-                        <!-- Patient Flags -->
-                        <div>
-                            <label class="block text-sm font-medium mb-3" style="color: var(--text);" x-text="t('patient_flags')"></label>
-                            <div class="space-y-2">
-                                <label class="flex items-center space-x-2">
-                                    <input type="checkbox" x-model="formData.hZone" 
-                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <span class="text-sm" style="color: var(--text);" x-text="t('h_zone')"></span>
-                                </label>
-                                <label class="flex items-center space-x-2">
-                                    <input type="checkbox" x-model="formData.illDefinedBorders" 
-                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <span class="text-sm" style="color: var(--text);" x-text="t('ill_defined_borders')"></span>
-                                </label>
-                                <label class="flex items-center space-x-2">
-                                    <input type="checkbox" x-model="formData.recurrentTumor" 
-                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <span class="text-sm" style="color: var(--text);" x-text="t('recurrent_tumor')"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Buttons -->
-                        <div class="flex space-x-3 pt-4">
-                            <button type="submit" 
-                                    :disabled="!selectedFile || !formData.site || analyzing"
-                                    class="flex-1 btn-primary py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <template x-if="!analyzing">
-                                    <i data-lucide="activity" class="w-4 h-4"></i>
-                                </template>
-                                <template x-if="analyzing">
-                                    <div class="progress-spinner w-4 h-4"></div>
-                                </template>
-                                <span x-text="analyzing ? 'Analyzing...' : 'Analyze Image'"></span>
-                            </button>
-                            <button type="button" x-on:click="resetForm()" 
-                                    class="px-6 py-3 border border-gray-300 rounded-xl font-medium transition-colors"
-                                    style="border-color: var(--border); color: var(--text);">
-                                <span x-text="t('reset')"></span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Right Column - Results -->
-            <div class="space-y-6">
-                <!-- Results Section -->
-                <div x-show="results" class="space-y-6">
-                    <!-- Diagnosis Probabilities -->
-                    <div class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                        <h3 class="text-lg font-semibold mb-4" style="color: var(--text);" x-text="t('diagnosis_probabilities')"></h3>
-                        <div class="space-y-3">
-                            <template x-for="(prob, index) in results.sortedDiagnosis" :key="prob.condition">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-24 text-sm font-medium capitalize" style="color: var(--text);" 
-                                         x-text="prob.condition.replace('_', ' ')"></div>
-                                    <div class="flex-1 bg-gray-200 rounded-full h-4 relative overflow-hidden">
-                                        <div class="h-4 rounded-full transition-all duration-1000" 
-                                             style="background-color: var(--accent);" 
-                                             :style="`width: ${prob.percentage}%`"></div>
-                                    </div>
-                                    <div class="w-12 text-sm font-semibold text-right" style="color: var(--text);" 
-                                         x-text="prob.percentage + '%'"></div>
-                                </div>
-                            </template>
-                        </div>
-                        
-                        <!-- Primary Diagnosis -->
-                        <div x-show="results.primaryDx" class="mt-6 p-4 rounded-lg" style="background-color: var(--muted);">
-                            <h4 class="font-semibold mb-2" style="color: var(--text);" x-text="t('primary_diagnosis')"></h4>
-                            <div class="text-lg font-bold" style="color: var(--accent);" x-text="results.primaryDx"></div>
-                        </div>
                     </div>
-
-                    <!-- Heatmap/Grad-CAM Viewer -->
-                    <div class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                        <h3 class="text-lg font-semibold mb-4" style="color: var(--text);" x-text="t('image_analysis')"></h3>
-                        
-                        <!-- Image Tabs -->
-                        <div class="flex space-x-1 mb-4 border-b" style="border-color: var(--border);">
-                            <button x-on:click="activeImageTab = 'original'" 
-                                    class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-                                    :class="activeImageTab === 'original' ? 'border-blue-500 text-blue-500' : 'border-transparent'"
-                                    x-text="t('original')"></button>
-                            <button x-on:click="activeImageTab = 'heatmap'" 
-                                    class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-                                    :class="activeImageTab === 'heatmap' ? 'border-blue-500 text-blue-500' : 'border-transparent'"
-                                    x-text="t('heatmap')"></button>
-                            <button x-on:click="activeImageTab = 'split'" 
-                                    class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-                                    :class="activeImageTab === 'split' ? 'border-blue-500 text-blue-500' : 'border-transparent'"
-                                    x-text="t('split_view')"></button>
-                        </div>
-
-                        <!-- Image Display -->
-                        <div class="relative rounded-lg overflow-hidden" style="aspect-ratio: 1/1; background-color: var(--muted);">
-                            <img x-show="activeImageTab === 'original'" 
-                                 :src="imagePreview" 
-                                 class="w-full h-full object-contain">
-                            <img x-show="activeImageTab === 'heatmap' && results.heatmapUrl" 
-                                 :src="results.heatmapUrl" 
-                                 class="w-full h-full object-contain">
-                            <div x-show="activeImageTab === 'split'" class="flex h-full">
-                                <img :src="imagePreview" class="w-1/2 h-full object-contain">
-                                <img x-show="results.heatmapUrl" :src="results.heatmapUrl" class="w-1/2 h-full object-contain">
-                            </div>
-                            
-                            <!-- Opacity Slider for heatmap -->
-                            <div x-show="activeImageTab === 'heatmap'" class="absolute bottom-4 left-4 right-4">
-                                <input type="range" min="0" max="100" x-model="heatmapOpacity" 
-                                       class="w-full" x-on:input="updateHeatmapOpacity()">
-                                <p class="text-xs text-center mt-1" style="color: var(--text);" x-text="t('opacity') + ': ' + heatmapOpacity + '%'"></p>
-                            </div>
-                        </div>
+                    <div class="row" style="margin-top:8px">
+                        <label><input type="checkbox" id="hZone"> H-Zone</label>
+                        <label><input type="checkbox" id="illBorders"> Ill-defined borders</label>
+                        <label><input type="checkbox" id="recurrent"> Recurrent tumor</label>
                     </div>
-
-                    <!-- Reconstruction Plan -->
-                    <div x-show="results.flapPlan" class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                        <h3 class="text-lg font-semibold mb-4" style="color: var(--text);" x-text="t('reconstruction_plan')"></h3>
-                        
-                        <template x-if="results.flapPlan">
-                            <div class="space-y-4">
-                                <!-- Flap Design -->
-                                <div x-show="results.flapPlan.suggestion">
-                                    <h4 class="font-medium" style="color: var(--text);" x-text="t('flap_design')"></h4>
-                                    <p style="color: var(--text); opacity: 0.8;" x-text="results.flapPlan.suggestion"></p>
-                                </div>
-                                
-                                <!-- Tension Axes -->
-                                <div x-show="results.flapPlan.tension_zone">
-                                    <h4 class="font-medium" style="color: var(--text);" x-text="t('tension_axes')"></h4>
-                                    <div class="flex flex-wrap gap-2 mt-2">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium" 
-                                              style="background-color: var(--muted); color: var(--text);"
-                                              x-text="results.flapPlan.tension_zone"></span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Success Probability -->
-                                <div x-show="results.flapPlan.predicted_success !== undefined">
-                                    <h4 class="font-medium" style="color: var(--text);" x-text="t('predicted_success')"></h4>
-                                    <div class="flex items-center space-x-3 mt-2">
-                                        <div class="flex-1 bg-gray-200 rounded-full h-3">
-                                            <div class="h-3 rounded-full" 
-                                                 style="background-color: var(--accent);" 
-                                                 :style="`width: ${(results.flapPlan.predicted_success * 100)}%`"></div>
-                                        </div>
-                                        <span class="font-semibold" style="color: var(--text);" 
-                                              x-text="Math.round(results.flapPlan.predicted_success * 100) + '%'"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-
-                    <!-- Contraindications & Warnings -->
-                    <div x-show="results.contraindications?.length || results.warnings?.length" 
-                         class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                        <h3 class="text-lg font-semibold mb-4" style="color: var(--text);" x-text="t('alerts')"></h3>
-                        
-                        <div x-show="results.contraindications?.length" class="mb-4">
-                            <h4 class="font-medium text-red-600 mb-2 flex items-center">
-                                <i data-lucide="alert-triangle" class="w-4 h-4 mr-2"></i>
-                                <span x-text="t('contraindications')"></span>
-                            </h4>
-                            <ul class="space-y-1">
-                                <template x-for="item in results.contraindications" :key="item">
-                                    <li class="text-sm text-red-600" x-text="item"></li>
-                                </template>
-                            </ul>
-                        </div>
-                        
-                        <div x-show="results.warnings?.length">
-                            <h4 class="font-medium text-amber-600 mb-2 flex items-center">
-                                <i data-lucide="alert-circle" class="w-4 h-4 mr-2"></i>
-                                <span x-text="t('warnings')"></span>
-                            </h4>
-                            <ul class="space-y-1">
-                                <template x-for="item in results.warnings" :key="item">
-                                    <li class="text-sm text-amber-600" x-text="item"></li>
-                                </template>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Citations -->
-                    <div x-show="results.citations?.length" class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                        <h3 class="text-lg font-semibold mb-4" style="color: var(--text);" x-text="t('references')"></h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <template x-for="(citation, index) in results.citations" :key="citation">
-                                <div class="flex items-center space-x-2">
-                                    <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full text-xs flex items-center justify-center font-medium" 
-                                          x-text="index + 1"></span>
-                                    <span class="text-sm" style="color: var(--text);" x-text="citation"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Download PDF -->
-                    <div class="card rounded-2xl shadow-lg p-6" style="background-color: var(--card); border-color: var(--border);">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-semibold" style="color: var(--text);" x-text="t('download_report')"></h3>
-                                <p class="text-sm" style="color: var(--text); opacity: 0.6;" x-text="t('comprehensive_pdf')"></p>
-                            </div>
-                            <button x-on:click="downloadPDF()" 
-                                    :disabled="!results.reportUrl"
-                                    class="btn-primary px-6 py-3 rounded-xl font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <i data-lucide="download" class="w-4 h-4"></i>
-                                <span x-text="t('download_pdf')"></span>
-                            </button>
-                        </div>
-                        <div x-show="results.artifactPath" class="mt-2">
-                            <p class="text-xs" style="color: var(--text); opacity: 0.5;" x-text="'Path: ' + results.artifactPath"></p>
-                        </div>
+                    <div class="row" style="margin-top:12px">
+                        <button class="btn primary" id="analyze" disabled>Analyze</button>
+                        <button class="btn" id="exportPdf" disabled>Export PDF</button>
+                        <input id="doctor" type="text" placeholder="Doctor name (optional)" style="max-width:220px"/>
+                        <button class="btn" id="reset">Reset</button>
+                        <span id="req" class="small"></span>
                     </div>
                 </div>
+            </section>
 
-                <!-- Placeholder when no results -->
-                <div x-show="!results && !analyzing" class="card rounded-2xl shadow-lg p-12 text-center" style="background-color: var(--card); border-color: var(--border);">
-                    <i data-lucide="image" class="w-16 h-16 mx-auto mb-4" style="color: var(--text); opacity: 0.3;"></i>
-                    <h3 class="text-lg font-semibold mb-2" style="color: var(--text);" x-text="t('upload_analyze')"></h3>
-                    <p style="color: var(--text); opacity: 0.6;" x-text="t('results_appear_here')"></p>
+            <section class="card" style="grid-column:1/-1">
+                <div class="hd">Results</div>
+                <div class="bd" id="results">
+                    <div class="small">No results yet. Upload, mark ROI, choose site, then Analyze.</div>
                 </div>
-            </div>
+            </section>
         </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="card border-t mt-12" style="background-color: var(--card); border-color: var(--border);">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
-                <div class="text-sm space-x-2" style="color: var(--text); opacity: 0.7;">
-                    <span class="inline-flex items-center">
-                        <i data-lucide="cpu" class="w-4 h-4 mr-1"></i>
-                        <span x-text="health.provider + '/' + health.model"></span>
-                    </span>
-                    <span class="inline-flex items-center">
-                        <i data-lucide="shield" class="w-4 h-4 mr-1"></i>
-                        <span x-text="'Fallback: ' + (health.fallback ? 'Active' : 'Off')"></span>
-                    </span>
-                    <span class="inline-flex items-center">
-                        <i data-lucide="hash" class="w-4 h-4 mr-1"></i>
-                        <span x-text="'Request-ID: ' + (lastRequestId || 'none')"></span>
-                    </span>
-                    <span class="inline-flex items-center">
-                        <i data-lucide="clock" class="w-4 h-4 mr-1"></i>
-                        <span x-text="'Last check: ' + (health.lastChecked || 'never')"></span>
-                    </span>
-                </div>
-                <div class="text-sm text-center sm:text-right" style="color: var(--text); opacity: 0.7;">
-                    © Dr. Mehdi Ghorbani Karimabad — Plastic, Reconstructive & Aesthetic Surgery
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Settings Modal -->
-    <div x-show="showSettings" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-         x-on:click.self="showSettings = false">
-        <div class="card rounded-2xl shadow-xl max-w-lg w-full mx-4" style="background-color: var(--card); border-color: var(--border);">
-            <div class="flex items-center justify-between p-6 border-b" style="border-color: var(--border);">
-                <h3 class="text-lg font-semibold" style="color: var(--text);" x-text="t('settings')"></h3>
-                <button x-on:click="showSettings = false" class="p-2 hover:bg-gray-100 rounded-lg">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4">
-                <!-- Provider Selector -->
-                <div>
-                    <label class="block text-sm font-medium mb-2" style="color: var(--text);" x-text="t('ai_provider')"></label>
-                    <select x-model="settings.provider" class="w-full rounded-lg border px-3 py-2" 
-                            style="background-color: var(--bg); border-color: var(--border); color: var(--text);">
-                        <option value="auto">Auto</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="anthropic">Anthropic</option>
-                    </select>
-                </div>
-                
-                <!-- Model Selectors -->
-                <div>
-                    <label class="block text-sm font-medium mb-2" style="color: var(--text);" x-text="t('model')"></label>
-                    <select x-model="settings.model" class="w-full rounded-lg border px-3 py-2" 
-                            style="background-color: var(--bg); border-color: var(--border); color: var(--text);">
-                        <option value="gpt-4o">GPT-4O</option>
-                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                        <option value="claude-3-haiku">Claude 3 Haiku</option>
-                    </select>
-                </div>
-                
-                <!-- Max Tokens -->
-                <div>
-                    <label class="block text-sm font-medium mb-2" style="color: var(--text);" x-text="t('max_tokens')"></label>
-                    <input type="number" x-model="settings.maxTokens" min="100" max="4000" 
-                           class="w-full rounded-lg border px-3 py-2" 
-                           style="background-color: var(--bg); border-color: var(--border); color: var(--text);">
-                </div>
-                
-                <!-- Stream Results -->
-                <div class="flex items-center space-x-2">
-                    <input type="checkbox" id="streamResults" x-model="settings.streamResults" 
-                           class="rounded border-gray-300">
-                    <label for="streamResults" class="text-sm" style="color: var(--text);" x-text="t('stream_results')"></label>
-                </div>
-                
-                <!-- Enable Crop -->
-                <div class="flex items-center space-x-2">
-                    <input type="checkbox" id="enableCrop" x-model="settings.enableCrop" 
-                           class="rounded border-gray-300">
-                    <label for="enableCrop" class="text-sm" style="color: var(--text);" x-text="t('enable_crop')"></label>
-                </div>
-            </div>
-            <div class="flex justify-end space-x-3 p-6 border-t" style="border-color: var(--border);">
-                <button x-on:click="showSettings = false" 
-                        class="px-4 py-2 border rounded-lg"
-                        style="border-color: var(--border); color: var(--text);" x-text="t('cancel')"></button>
-                <button x-on:click="saveSettings()" 
-                        class="btn-primary px-4 py-2 rounded-lg" x-text="t('save')"></button>
-            </div>
-        </div>
+        <footer>
+            © Dr. Mehdi Ghorbani Karimabad — Educational use only.
+        </footer>
     </div>
 
-    <!-- Logs Drawer -->
-    <div x-show="showLogs" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="transform translate-x-full"
-         x-transition:enter-end="transform translate-x-0"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="transform translate-x-0"
-         x-transition:leave-end="transform translate-x-full"
-         class="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-xl z-50 overflow-hidden"
-         style="background-color: var(--card);">
-        <div class="flex items-center justify-between p-6 border-b" style="border-color: var(--border);">
-            <h3 class="text-lg font-semibold" style="color: var(--text);" x-text="t('usage_logs')"></h3>
-            <button x-on:click="showLogs = false" class="p-2 hover:bg-gray-100 rounded-lg">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-        </div>
-        <div class="overflow-auto h-full p-6">
-            <div x-show="!logs.length" class="text-center py-8" style="color: var(--text); opacity: 0.6;">
-                <i data-lucide="file-text" class="w-12 h-12 mx-auto mb-4" style="opacity: 0.3;"></i>
-                <p x-text="t('no_logs')"></p>
-            </div>
-            <div class="space-y-3">
-                <template x-for="log in logs" :key="log.request_id">
-                    <div class="p-3 border rounded-lg cursor-pointer hover:bg-gray-50" 
-                         style="border-color: var(--border);"
-                         x-on:click="copyLogEntry(log)">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-sm font-medium" style="color: var(--text);" x-text="log.provider + '/' + log.model"></span>
-                            <span class="text-xs" style="color: var(--text); opacity: 0.6;" x-text="formatDate(log.time)"></span>
-                        </div>
-                        <div class="text-xs space-y-1" style="color: var(--text); opacity: 0.7;">
-                            <div x-text="'Tokens: ' + (log.input_tokens || 0) + ' → ' + (log.output_tokens || 0)"></div>
-                            <div x-text="'Cost: $' + (log.cost_usd || 0).toFixed(4) + ' | ' + (log.latency_ms || 0) + 'ms'"></div>
-                            <div class="font-mono text-xs" x-text="log.request_id"></div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </div>
-    </div>
-
-    <!-- Help Modal -->
-    <div x-show="showHelp" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-         x-on:click.self="showHelp = false">
-        <div class="card rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-auto" 
-             style="background-color: var(--card); border-color: var(--border);">
-            <div class="flex items-center justify-between p-6 border-b" style="border-color: var(--border);">
-                <h3 class="text-lg font-semibold" style="color: var(--text);" x-text="t('help_guide')"></h3>
-                <button x-on:click="showHelp = false" class="p-2 hover:bg-gray-100 rounded-lg">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            <div class="p-6 space-y-4" style="color: var(--text);">
-                <div>
-                    <h4 class="font-semibold mb-2" x-text="t('how_to_use')"></h4>
-                    <ol class="list-decimal list-inside space-y-1 text-sm" style="opacity: 0.8;">
-                        <li x-text="t('step_upload')"></li>
-                        <li x-text="t('step_select_site')"></li>
-                        <li x-text="t('step_set_flags')"></li>
-                        <li x-text="t('step_analyze')"></li>
-                        <li x-text="t('step_review')"></li>
-                        <li x-text="t('step_download')"></li>
-                    </ol>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2" x-text="t('keyboard_shortcuts')"></h4>
-                    <div class="text-sm space-y-1" style="opacity: 0.8;">
-                        <div x-text="t('shortcut_upload')"></div>
-                        <div x-text="t('shortcut_themes')"></div>
-                        <div x-text="t('shortcut_settings')"></div>
-                    </div>
-                </div>
-                <div class="bg-red-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-red-800 mb-2" x-text="t('important_disclaimer')"></h4>
-                    <p class="text-sm text-red-700" x-text="t('disclaimer_text')"></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div x-ref="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
-
-    <!-- Scripts -->
     <script src="api.js"></script>
     <script>
-        // SurgicalAI Professional Dashboard - Alpine.js Application
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('app', () => ({
-                // Theme Management
-                theme: localStorage.getItem('surgicalai_theme') || 'light',
-                
-                // Language Support
-                language: localStorage.getItem('surgicalai_language') || 'en',
-                
-                // UI State
-                analyzing: false,
-                streamingMode: false,
-                progress: 0,
-                progressText: '',
-                
-                // Form Data
-                selectedFile: null,
-                previewUrl: null,
-                imagePreview: null, // alias used in template
-                site: '',
-                suspectedDiagnosis: '',
-                age: null,
-                sex: 'Male',
-                priorHistology: false,
-                illDefinedBorders: false,
-                recurrent: false,
-                formData: { // structure expected by template bindings
-                    site: '',
-                    suspectedType: '',
-                    hZone: false,
-                    illDefinedBorders: false,
-                    recurrentTumor: false
-                },
-                
-                // Analysis Results
-                results: null,
-                currentAnalysisId: null,
-                artifacts: {},
-                
-                // UI Modals
-                showSettings: false,
-                showLogs: false,
-                showHelp: false,
-                
-                // Settings
-                settings: {
-                    enableStreaming: true,
-                    autoSave: true,
-                    notifications: true,
-                    animations: true
-                },
-                
-                // Usage Logs
-                usageLogs: [],
-                
-                // System Health
-                health: {
-                    ok: false,
-                    provider: 'Checking...',
-                    model: 'Unknown',
-                    fallback: false,
-                    lastChecked: null
-                },
-                
-                // Facial Subunits
-                facialSubunits: [],
-                
-                // Translations
-                translations: {
-                    en: {
-                        // Header
-                        surgical_ai: 'SurgicalAI',
-                        professional_dashboard: 'Professional Dashboard',
-                        settings: 'Settings',
-                        logs: 'Usage Logs',
-                        help: 'Help',
-                        
-                        // Themes
-                        light_theme: 'Light',
-                        dark_theme: 'Dark',
-                        clinic_theme: 'Clinic',
-                        
-                        // Upload
-                        upload_image: 'Upload Medical Image',
-                        drag_drop_hint: 'Drag and drop your image here, or click to browse',
-                        supported_formats: 'Supported: JPEG, PNG (max 10MB)',
-                        
-                        // Form
-                        facial_subunit: 'Facial Subunit',
-                        select_subunit: 'Select facial subunit...',
-                        suspected_diagnosis: 'Suspected Diagnosis (Optional)',
-                        enter_suspected: 'Enter suspected diagnosis...',
-                        patient_age: 'Patient Age',
-                        sex: 'Sex',
-                        male: 'Male',
-                        female: 'Female',
-                        clinical_flags: 'Clinical Flags',
-                        prior_histology: 'Prior histology available',
-                        ill_defined_borders: 'Ill-defined borders',
-                        recurrent_lesion: 'Recurrent lesion',
-                        
-                        // Actions
-                        analyze_image: 'Analyze Image',
-                        analyzing: 'Analyzing...',
-                        clear_form: 'Clear Form',
-                        
-                        // Results
-                        analysis_results: 'Analysis Results',
-                        diagnosis_probabilities: 'Diagnosis Probabilities',
-                        primary_diagnosis: 'Primary Diagnosis',
-                        reconstruction_plan: 'Reconstruction Plan',
-                        contraindications: 'Contraindications',
-                        warnings: 'Warnings',
-                        references: 'References',
-                        
-                        // Reconstruction
-                        design: 'Design',
-                        site_label: 'Site',
-                        tension_axes: 'Tension Axes',
-                        rationale: 'Rationale',
-                        success_probability: 'Success Probability',
-                        
-                        // Artifacts
-                        visual_analysis: 'Visual Analysis',
-                        overlay: 'Overlay',
-                        heatmap: 'Heatmap',
-                        download_report: 'Download Report',
-                        comprehensive_pdf: 'Comprehensive analysis report in PDF format',
-                        download_pdf: 'Download PDF',
-                        view_json: 'View JSON',
-                        
-                        // Settings Modal
-                        application_settings: 'Application Settings',
-                        enable_streaming: 'Enable streaming analysis',
-                        auto_save_form: 'Auto-save form data',
-                        show_notifications: 'Show notifications',
-                        enable_animations: 'Enable animations',
-                        system_health: 'System Health',
-                        ai_provider: 'AI Provider',
-                        model: 'Model',
-                        fallback_mode: 'Fallback Mode',
-                        last_checked: 'Last Checked',
-                        check_health: 'Check Health',
-                        
-                        // Logs Modal
-                        recent_usage: 'Recent Usage',
-                        no_logs: 'No usage logs available',
-                        analysis_date: 'Analysis Date',
-                        patient_info: 'Patient Info',
-                        diagnosis: 'Diagnosis',
-                        
-                        // Help Modal
-                        help_guide: 'Help & Guide',
-                        how_to_use: 'How to Use',
-                        step_upload: 'Upload a medical image (JPEG/PNG)',
-                        step_select_site: 'Select the facial subunit',
-                        step_set_flags: 'Set clinical flags if applicable',
-                        step_analyze: 'Click "Analyze Image" to start',
-                        step_review: 'Review the analysis results',
-                        step_download: 'Download the PDF report',
-                        keyboard_shortcuts: 'Keyboard Shortcuts',
-                        shortcut_upload: 'Ctrl+U - Open file upload',
-                        shortcut_themes: 'Ctrl+T - Cycle themes',
-                        shortcut_settings: 'Ctrl+, - Open settings',
-                        important_disclaimer: 'Important Disclaimer',
-                        disclaimer_text: 'This tool is for educational and research purposes only. Always consult with qualified medical professionals for clinical decisions.',
-                        
-                        // Notifications
-                        file_uploaded: 'Image uploaded successfully',
-                        analysis_complete: 'Analysis completed',
-                        analysis_failed: 'Analysis failed',
-                        settings_saved: 'Settings saved',
-                        form_cleared: 'Form cleared',
-                        health_checked: 'Health status updated',
-                        
-                        // Errors
-                        invalid_file: 'Please upload a valid JPEG or PNG image',
-                        file_too_large: 'File size must be less than 10MB',
-                        select_site_error: 'Please select a facial subunit',
-                        analysis_error: 'Analysis failed. Please try again.',
-                        network_error: 'Network error. Please check your connection.'
-                    },
-                    tr: {
-                        // Header
-                        surgical_ai: 'CerrahiAI',
-                        professional_dashboard: 'Profesyonel Pano',
-                        settings: 'Ayarlar',
-                        logs: 'Kullanım Kayıtları',
-                        help: 'Yardım',
-                        
-                        // Themes
-                        light_theme: 'Açık',
-                        dark_theme: 'Koyu',
-                        clinic_theme: 'Klinik',
-                        
-                        // Upload
-                        upload_image: 'Tıbbi Görüntü Yükle',
-                        drag_drop_hint: 'Görüntünüzü buraya sürükleyip bırakın veya göz atmak için tıklayın',
-                        supported_formats: 'Desteklenen: JPEG, PNG (maks 10MB)',
-                        
-                        // Form
-                        facial_subunit: 'Yüz Alt Birimi',
-                        select_subunit: 'Yüz alt birimini seçin...',
-                        suspected_diagnosis: 'Şüpheli Tanı (İsteğe Bağlı)',
-                        enter_suspected: 'Şüpheli tanıyı girin...',
-                        patient_age: 'Hasta Yaşı',
-                        sex: 'Cinsiyet',
-                        male: 'Erkek',
-                        female: 'Kadın',
-                        clinical_flags: 'Klinik İşaretler',
-                        prior_histology: 'Önceki histoloji mevcut',
-                        ill_defined_borders: 'Belirsiz sınırlar',
-                        recurrent_lesion: 'Tekrarlayan lezyon',
-                        
-                        // Actions
-                        analyze_image: 'Görüntüyü Analiz Et',
-                        analyzing: 'Analiz ediliyor...',
-                        clear_form: 'Formu Temizle',
-                        
-                        // Results
-                        analysis_results: 'Analiz Sonuçları',
-                        diagnosis_probabilities: 'Tanı Olasılıkları',
-                        primary_diagnosis: 'Birincil Tanı',
-                        reconstruction_plan: 'Rekonstrüksiyon Planı',
-                        contraindications: 'Kontrendikasyonlar',
-                        warnings: 'Uyarılar',
-                        references: 'Referanslar',
-                        
-                        // And more Turkish translations...
-                        invalid_file: 'Lütfen geçerli bir JPEG veya PNG görüntüsü yükleyin',
-                        analysis_error: 'Analiz başarısız. Lütfen tekrar deneyin.',
-                        network_error: 'Ağ hatası. Lütfen bağlantınızı kontrol edin.'
-                    }
-                },
-                
-                // Initialization
-                init() {
-                    this.loadSettings();
-                    this.applyTheme();
-                    this.loadFacialSubunits();
-                    this.checkHealth();
-                    this.loadUsageLogs();
-                    this.setupKeyboardShortcuts();
-                    this.initializeLucideIcons();
-                    
-                    // Auto-save form data
-                    this.$watch('selectedFile', () => this.autoSave());
-                    this.$watch('site', () => this.autoSave());
-                    this.$watch('age', () => this.autoSave());
-                    this.$watch('sex', () => this.autoSave());
-                    this.$watch('priorHistology', () => this.autoSave());
-                    this.$watch('illDefinedBorders', () => this.autoSave());
-                    this.$watch('recurrent', () => this.autoSave());
-                },
-                
-                // Theme Management
-                setTheme(newTheme) {
-                    this.theme = newTheme;
-                    localStorage.setItem('surgicalai_theme', newTheme);
-                    this.applyTheme();
-                    this.showToast(this.t('settings_saved'));
-                },
-                
-                applyTheme() {
-                    document.documentElement.className = `theme-${this.theme}`;
-                    
-                    // Update meta theme-color for mobile browsers
-                    const themeColors = {
-                        light: '#ffffff',
-                        dark: '#1a1a1a',
-                        clinic: '#f8fafc'
-                    };
-                    
-                    let themeColorMeta = document.querySelector('meta[name="theme-color"]');
-                    if (!themeColorMeta) {
-                        themeColorMeta = document.createElement('meta');
-                        themeColorMeta.name = 'theme-color';
-                        document.head.appendChild(themeColorMeta);
-                    }
-                    themeColorMeta.content = themeColors[this.theme];
-                },
-                
-                // Language Management
-                setLanguage(lang) {
-                    this.language = lang;
-                    localStorage.setItem('surgicalai_language', lang);
-                },
-                
-                t(key) {
-                    return this.translations[this.language]?.[key] || this.translations.en[key] || key;
-                },
-                
-                // File Handling
-                async handleFileSelect(event) {
-                    const file = event.target.files?.[0];
-                    if (file) {
-                        await this.processFile(file);
-                    }
-                },
-                
-                async handleFileDrop(event) {
-                    event.preventDefault();
-                    const files = event.dataTransfer.files;
-                    if (files.length > 0) {
-                        await this.processFile(files[0]);
-                    }
-                },
-                // Template uses handleDrop
-                async handleDrop(event){ return this.handleFileDrop(event); },
-                
-                async processFile(file) {
-                    // Validate file
-                    if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
-                        this.showToast(this.t('invalid_file'), 'error');
-                        return;
-                    }
-                    
-                    if (file.size > 10 * 1024 * 1024) { // 10MB
-                        this.showToast(this.t('file_too_large'), 'error');
-                        return;
-                    }
-                    
-                    this.selectedFile = file;
-                    
-                    // Create preview
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        this.previewUrl = e.target.result;
-                        this.imagePreview = this.previewUrl;
-                    };
-                    reader.readAsDataURL(file);
-                    
-                    this.showToast(this.t('file_uploaded'), 'success');
-                },
-                
-                // Analysis
-                async analyzeImage() {
-                    // sync legacy fields from formData if present
-                    if (this.formData) {
-                        if (this.formData.site) this.site = this.formData.site;
-                        this.illDefinedBorders = this.formData.illDefinedBorders;
-                        this.recurrent = this.formData.recurrentTumor;
-                    }
+        // State
+        const els = {
+            drop: document.getElementById('drop'), file: document.getElementById('file'), dropMsg: document.getElementById('dropMsg'),
+            canvas: document.getElementById('canvas'), start: document.getElementById('startPoly'), finish: document.getElementById('finishPoly'), clear: document.getElementById('clearPoly'),
+            site: document.getElementById('site'), age: document.getElementById('age'), sex: document.getElementById('sex'),
+            hZone: document.getElementById('hZone'), ill: document.getElementById('illBorders'), rec: document.getElementById('recurrent'),
+            analyze: document.getElementById('analyze'), reset: document.getElementById('reset'), results: document.getElementById('results'), req: document.getElementById('req'), health: document.querySelector('#health span')
+        };
 
-                    if (!this.selectedFile || !this.site) {
-                        this.showToast(this.t('select_site_error'), 'error');
-                        return;
-                    }
-                    
-                    this.analyzing = true;
-                    this.results = null;
-                    this.progress = 0;
-                    this.progressText = this.t('analyzing');
-                    
-                    try {
-                        const flags = {
-                            sex: this.sex,
-                            age: this.age,
-                            prior_histology: this.priorHistology,
-                            ill_defined_borders: this.illDefinedBorders || this.formData.illDefinedBorders,
-                            recurrent: this.recurrent || this.formData.recurrentTumor,
-                            h_zone: this.formData?.hZone || false
-                        };
-                        
-                        let result;
-                        if (this.settings.enableStreaming && this.streamingMode) {
-                            result = await this.analyzeWithStreaming(flags);
-                        } else {
-                            result = await this.analyzeRegular(flags);
-                        }
-                        
-                        this.processResults(result);
-                        this.showToast(this.t('analysis_complete'), 'success');
-                        
-                    } catch (error) {
-                        console.error('Analysis failed:', error);
-                        this.showToast(this.t('analysis_error'), 'error');
-                    } finally {
-                        this.analyzing = false;
-                    }
-                },
-                
-                async analyzeRegular(flags) {
-                    const result = await surgicalAI.postAnalyze({
-                        file: this.selectedFile,
-                        site: this.site,
-                        suspected: this.suspectedDiagnosis,
-                        flags
-                    });
-                    
-                    this.progress = 100;
-                    return result;
-                },
-                
-                async analyzeWithStreaming(flags) {
-                    const stream = await surgicalAI.openStream({
-                        file: this.selectedFile,
-                        site: this.site,
-                        suspected: this.suspectedDiagnosis,
-                        flags
-                    });
-                    
-                    let result = null;
-                    for await (const event of stream.stream()) {
-                        if (event.type === 'chunk') {
-                            this.progressText = event.content;
-                            this.progress = Math.min(90, this.progress + 5);
-                        } else if (event.type === 'complete') {
-                            result = { json: event.result, artifacts: {} };
-                            this.progress = 100;
-                            break;
-                        }
-                    }
-                    
-                    return result;
-                },
-                
-                processResults(result) {
-                    const data = result.json;
-                    this.currentAnalysisId = data.run_id;
-                    this.artifacts = result.artifacts || surgicalAI.processArtifacts(data.artifacts_list || []);
-                    
-                    // Process enhanced analysis
-                    if (data.analysis) {
-                        const probs = data.analysis.diagnosis_probs || [];
-                        const sortedDiagnosis = probs.map(p => ({
-                            condition: (p.label || p.condition || '').replace(/_/g,' '),
-                            percentage: Math.round(((p.probability ?? p.p) || 0) * 100)
-                        })).sort((a,b)=> b.percentage - a.percentage);
-                        this.results = {
-                            provider: data.provider,
-                            model: data.model,
-                            primaryDx: data.analysis.primary_dx,
-                            sortedDiagnosis,
-                            heatmapUrl: this.artifacts.gradcam?.url || this.artifacts.heatmap?.url,
-                            flapPlan: data.analysis.reconstruction_plan || data.analysis.flap_plan,
-                            contraindications: data.analysis.contraindications || [],
-                            warnings: data.analysis.warnings || [],
-                            citations: data.analysis.citations || [],
-                            reportUrl: this.artifacts.report?.url || this.artifacts.pdf?.url,
-                            artifactPath: this.artifacts.report?.path || this.artifacts.pdf?.path
-                        };
-                    } else {
-                        const legacy = this.convertLegacyProbs(data.diagnosis || data.probs || {});
-                        const sortedDiagnosis = legacy.map(p => ({
-                            condition: p.label,
-                            percentage: Math.round((p.probability || 0) * 100)
-                        }));
-                        this.results = {
-                            provider: data.provider,
-                            model: data.model,
-                            sortedDiagnosis,
-                            primaryDx: sortedDiagnosis[0]?.condition || null,
-                            heatmapUrl: this.artifacts.gradcam?.url || this.artifacts.heatmap?.url,
-                            flapPlan: data.reconstruction_plan || null,
-                            reportUrl: this.artifacts.report?.url || this.artifacts.pdf?.url,
-                            artifactPath: this.artifacts.report?.path || this.artifacts.pdf?.path
-                        };
-                    }
-                    
-                    // Cache result
-                    resultCache.save(this.results);
-                },
-                
-                convertLegacyProbs(probs) {
-                    return Object.entries(probs).map(([label, probability]) => ({
-                        label: label.replace(/_/g, ' '),
-                        probability: typeof probability === 'number' ? probability : 0
-                    })).sort((a, b) => b.probability - a.probability);
-                },
-                
-                // Utilities
-                formatProb(prob) {
-                    return surgicalAI.formatProb(prob);
-                },
-                
-                barWidth(prob) {
-                    return surgicalAI.barWidth(prob);
-                },
-                
-                downloadPDF() {
-                    if (this.results?.reportUrl) {
-                        window.open(this.results.reportUrl + '?t=' + Date.now(), '_blank');
-                    }
-                },
-                
-                clearForm() {
-                    this.selectedFile = null;
-                    this.previewUrl = null;
-                    this.imagePreview = null;
-                    this.site = '';
-                    this.suspectedDiagnosis = '';
-                    this.age = null;
-                    this.sex = 'Male';
-                    this.priorHistology = false;
-                    this.illDefinedBorders = false;
-                    this.recurrent = false;
-                    if (this.formData) {
-                        this.formData.site = '';
-                        this.formData.suspectedType = '';
-                        this.formData.hZone = false;
-                        this.formData.illDefinedBorders = false;
-                        this.formData.recurrentTumor = false;
-                    }
-                    this.results = null;
-                    this.artifacts = {};
-                    
-                    // Clear file input
-                    const fileInput = document.querySelector('input[type="file"]');
-                    if (fileInput) fileInput.value = '';
-                    
-                    // Clear cache
-                    resultCache.clear();
-                    
-                    this.showToast(this.t('form_cleared'));
-                },
-                resetForm(){ this.clearForm(); },
-                formatFileSize(bytes){ return surgicalAI.formatFileSize(bytes); },
-                
-                // Settings Management
-                loadSettings() {
-                    const saved = localStorage.getItem('surgicalai_settings');
-                    if (saved) {
-                        try {
-                            this.settings = { ...this.settings, ...JSON.parse(saved) };
-                        } catch (e) {
-                            console.warn('Failed to load settings:', e);
-                        }
-                    }
-                },
-                
-                saveSettings() {
-                    localStorage.setItem('surgicalai_settings', JSON.stringify(this.settings));
-                    this.showToast(this.t('settings_saved'));
-                },
-                
-                // Auto-save
-                autoSave() {
-                    if (this.settings.autoSave) {
-                        const formData = {
-                            site: this.site,
-                            suspectedDiagnosis: this.suspectedDiagnosis,
-                            age: this.age,
-                            sex: this.sex,
-                            priorHistology: this.priorHistology,
-                            illDefinedBorders: this.illDefinedBorders,
-                            recurrent: this.recurrent
-                        };
-                        localStorage.setItem('surgicalai_form_data', JSON.stringify(formData));
-                    }
-                },
-                
-                loadFormData() {
-                    const saved = localStorage.getItem('surgicalai_form_data');
-                    if (saved) {
-                        try {
-                            const data = JSON.parse(saved);
-                            Object.assign(this, data);
-                        } catch (e) {
-                            console.warn('Failed to load form data:', e);
-                        }
-                    }
-                },
-                
-                // Health Check
-                async checkHealth() {
-                    try {
-                        this.health = await surgicalAI.getHealth();
-                        this.health.lastChecked = new Date().toLocaleTimeString();
-                    } catch (error) {
-                        console.warn('Health check failed:', error);
-                        this.health.ok = false;
-                        this.health.provider = 'Offline';
-                    }
-                },
-                
-                // Usage Logs
-                async loadUsageLogs() {
-                    try {
-                        this.usageLogs = await surgicalAI.getLastUsage(20);
-                    } catch (error) {
-                        console.warn('Failed to load usage logs:', error);
-                        this.usageLogs = [];
-                    }
-                },
-                
-                // Facial Subunits
-                async loadFacialSubunits() {
-                    try {
-                        const response = await fetch('/api/facial-subunits');
-                        if (response.ok) {
-                            const data = await response.json();
-                            this.facialSubunits = data.subunits || [];
-                        }
-                    } catch (error) {
-                        console.warn('Failed to load facial subunits:', error);
-                        // Fallback
-                        this.facialSubunits = [
-                            { value: 'forehead', label: 'Forehead' },
-                            { value: 'temple', label: 'Temple' },
-                            { value: 'cheek_medial', label: 'Medial Cheek' },
-                            { value: 'cheek_lateral', label: 'Lateral Cheek' },
-                            { value: 'nose_dorsum', label: 'Nasal Dorsum' },
-                            { value: 'nose_tip', label: 'Nasal Tip' },
-                            { value: 'nose_ala', label: 'Nasal Ala' },
-                            { value: 'lip_upper', label: 'Upper Lip' },
-                            { value: 'lip_lower', label: 'Lower Lip' },
-                            { value: 'chin', label: 'Chin' }
-                        ];
-                    }
-                },
-                
-                // Keyboard Shortcuts
-                setupKeyboardShortcuts() {
-                    document.addEventListener('keydown', (e) => {
-                        if (e.ctrlKey || e.metaKey) {
-                            switch (e.key) {
-                                case 'u':
-                                    e.preventDefault();
-                                    document.querySelector('input[type="file"]')?.click();
-                                    break;
-                                case 't':
-                                    e.preventDefault();
-                                    const themes = ['light', 'dark', 'clinic'];
-                                    const currentIndex = themes.indexOf(this.theme);
-                                    const nextTheme = themes[(currentIndex + 1) % themes.length];
-                                    this.setTheme(nextTheme);
-                                    break;
-                                case ',':
-                                    e.preventDefault();
-                                    this.showSettings = true;
-                                    break;
-                            }
-                        }
-                    });
-                },
-                
-                // Initialize Lucide Icons
-                initializeLucideIcons() {
-                    this.$nextTick(() => {
-                        if (window.lucide) {
-                            lucide.createIcons();
-                        }
-                    });
-                },
-                
-                // Toast Notifications
-                showToast(message, type = 'info', duration = 4000) {
-                    if (!this.settings.notifications) return;
-                    
-                    const toast = document.createElement('div');
-                    toast.className = `toast toast-${type} bg-white shadow-lg rounded-lg p-4 mb-2 border-l-4 transform transition-all duration-300 translate-x-full`;
-                    
-                    const colors = {
-                        success: 'border-green-500 text-green-800',
-                        error: 'border-red-500 text-red-800',
-                        warning: 'border-yellow-500 text-yellow-800',
-                        info: 'border-blue-500 text-blue-800'
+        const state = {
+            img: null, imgDataUrl: null, file: null,
+            polyActive: false, pts: [], // points in normalized coords [x,y] w.r.t canvas size
+            analyzing: false,
+            lastResult: null
+        };
+
+        // Health
+        (async () => {
+            try { const h = await surgicalAI.getHealth(); els.health.textContent = h.ok ? 'ok' : 'unhealthy'; } catch { els.health.textContent = 'offline'; }
+        })();
+
+        // Toast
+        function toast(msg, kind){
+            const t = document.createElement('div'); t.className = 'toast' + (kind==='err'?' err':''); t.textContent = msg; document.body.appendChild(t);
+            setTimeout(()=>{ t.remove(); }, 3500);
+        }
+
+        // Canvas helpers
+        const ctx = els.canvas.getContext('2d');
+        function fitAndDraw(){
+            if(!state.img) return; const maxW = els.canvas.parentElement.clientWidth; const scale = Math.min(maxW / state.img.naturalWidth, 600 / state.img.naturalHeight, 1);
+            const w = Math.round(state.img.naturalWidth * scale); const h = Math.round(state.img.naturalHeight * scale);
+            const dpr = window.devicePixelRatio || 1; els.canvas.style.width = w+'px'; els.canvas.style.height = h+'px'; els.canvas.width = Math.round(w*dpr); els.canvas.height = Math.round(h*dpr);
+            ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h); ctx.drawImage(state.img, 0, 0, w, h); drawPoly(w,h);
+        }
+        function drawPoly(w = els.canvas.width, h = els.canvas.height){
+            const dpr = window.devicePixelRatio || 1; ctx.save(); ctx.lineWidth = 2; ctx.strokeStyle = '#e5534b'; ctx.fillStyle = 'rgba(229,83,75,0.12)';
+            const px = p => [p[0]*(els.canvas.width/dpr), p[1]*(els.canvas.height/dpr)];
+            if(state.pts.length){ ctx.beginPath(); const [x0,y0] = px(state.pts[0]); ctx.moveTo(x0,y0); for(let i=1;i<state.pts.length;i++){ const [x,y] = px(state.pts[i]); ctx.lineTo(x,y); }
+                if(!state.polyActive && state.pts.length>=3){ ctx.closePath(); ctx.fill(); }
+                ctx.stroke(); }
+            ctx.restore();
+        }
+        function addPointFromEvent(e){
+            if(!state.polyActive) return; const rect = els.canvas.getBoundingClientRect(); const x = (e.clientX - rect.left)/rect.width; const y = (e.clientY - rect.top)/rect.height;
+            state.pts.push([Math.max(0,Math.min(1,x)), Math.max(0,Math.min(1,y))]); fitAndDraw(); updateAnalyzeEnabled();
+        }
+
+        // File handling
+        els.drop.addEventListener('click', ()=> els.file.click());
+        els.drop.addEventListener('dragover', e => { e.preventDefault(); els.drop.style.borderColor = '#3fb950'; });
+        els.drop.addEventListener('dragleave', e => { e.preventDefault(); els.drop.style.borderColor = 'var(--border)'; });
+        els.drop.addEventListener('drop', e => { e.preventDefault(); els.drop.style.borderColor = 'var(--border)'; if(e.dataTransfer.files?.[0]) loadFile(e.dataTransfer.files[0]); });
+        els.file.addEventListener('change', e => { if(e.target.files?.[0]) loadFile(e.target.files[0]); });
+        function loadFile(file){
+            try { SurgicalAI.validateImage(file); } catch (err) { toast(err.message, 'err'); return; }
+            state.file = file; const fr = new FileReader(); fr.onload = () => { state.imgDataUrl = fr.result; const img = new Image(); img.onload = ()=>{ state.img = img; state.pts = []; state.polyActive = false; fitAndDraw(); updateAnalyzeEnabled(); }; img.src = state.imgDataUrl; }; fr.readAsDataURL(file);
+            els.dropMsg.textContent = file.name + ' (' + SurgicalAI.formatFileSize(file.size) + ')';
+        }
+
+        // Polygon controls
+        els.start.addEventListener('click', ()=>{ if(!state.img){ toast('Load an image first','err'); return; } state.pts = []; state.polyActive = true; fitAndDraw(); updateAnalyzeEnabled(); });
+        els.finish.addEventListener('click', async ()=>{
+            state.polyActive = false; fitAndDraw(); updateAnalyzeEnabled();
+            // Auto-send to backend for classification (Claude) after ROI is finished
+            if(state.img && state.pts.length>=3 && els.site.value){
+                state.analyzing = true; updateAnalyzeEnabled(); els.analyze.textContent = 'Analyzing…';
+                try{
+                    const base64 = String(state.imgDataUrl).split(',')[1];
+                    const risks = {
+                        smoker:false, uv_high:false, immunosuppressed:false, radiated:false, anticoagulants:false, diabetes:false,
+                        ill_defined_borders: !!els.ill.checked, recurrent_tumor: !!els.rec.checked
                     };
-                    
-                    toast.className += ` ${colors[type] || colors.info}`;
-                    toast.textContent = message;
-                    
-                    const container = this.$refs.toastContainer;
-                    container.appendChild(toast);
-                    
-                    // Animate in
-                    setTimeout(() => {
-                        toast.classList.remove('translate-x-full');
-                    }, 50);
-                    
-                    // Animate out and remove
-                    setTimeout(() => {
-                        toast.classList.add('translate-x-full');
-                        setTimeout(() => {
-                            if (container.contains(toast)) {
-                                container.removeChild(toast);
-                            }
-                        }, 300);
-                    }, duration);
-                },
-                
-                // Computed Properties
-                get canAnalyze() {
-                    return this.selectedFile && this.site && !this.analyzing;
-                },
-                
-                get hasResults() {
-                    return this.results !== null;
-                },
-                
-                get healthStatus() {
-                    return this.health.ok ? 'healthy' : 'unhealthy';
-                }
-            }))
-        });
-        
-        // Initialize Lucide Icons after Alpine
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.lucide) {
-                lucide.createIcons();
+                    // Use Claude unless offline is checked
+                    const provider = els.hZone.checked ? 'anthropic' : null;
+                    const { json, requestId } = await surgicalAI.triage({
+                        imageBase64: base64,
+                        roiPolygon: state.pts.slice(),
+                        site: els.site.value,
+                        age: Number(els.age.value||0) || null,
+                        sex: els.sex.value,
+                        risks,
+                        offline: false,
+                        provider
+                    });
+                    els.req.textContent = requestId ? 'Request-ID: '+requestId : '';
+                    state.lastResult = json; renderResults(json);
+                    if(json && json.overlay) drawOverlay(json.overlay);
+                    toast('Analysis complete');
+                }catch(err){
+                    const msg = err?.message || 'Analysis failed'; toast(msg, 'err');
+                }finally{ state.analyzing = false; els.analyze.textContent = 'Analyze'; updateAnalyzeEnabled(); }
             }
         });
-        
-        // Progressive Web App Support
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => {
-                    console.log('SW registration failed');
-                });
-            });
+        els.clear.addEventListener('click', ()=>{ state.polyActive = false; state.pts = []; fitAndDraw(); updateAnalyzeEnabled(); });
+        els.canvas.addEventListener('mousedown', addPointFromEvent);
+        window.addEventListener('resize', fitAndDraw);
+
+        // Analyze
+        function updateAnalyzeEnabled(){ els.analyze.disabled = !(state.file && els.site.value && state.pts.length>=3 && !state.analyzing); }
+        function updateAnalyzeEnabled(){
+            els.analyze.disabled = !(state.file && els.site.value && state.pts.length>=3 && !state.analyzing);
+            els.exportPdf.disabled = !state.lastResult ? true : false;
+            els.exportPdf.style.opacity = els.exportPdf.disabled ? 0.5 : 1;
         }
+        ['change','input'].forEach(ev=> els.site.addEventListener(ev, updateAnalyzeEnabled));
+        els.analyze.addEventListener('click', async ()=>{
+            if(els.analyze.disabled) return; state.analyzing = true; updateAnalyzeEnabled(); els.analyze.textContent = 'Analyzing…';
+            try{
+                const base64 = String(state.imgDataUrl).split(',')[1];
+                const risks = {
+                    smoker:false, uv_high:false, immunosuppressed:false, radiated:false, anticoagulants:false, diabetes:false,
+                    ill_defined_borders: !!els.ill.checked, recurrent_tumor: !!els.rec.checked
+                };
+                const { json, requestId } = await surgicalAI.triage({
+                    imageBase64: base64,
+                    roiPolygon: state.pts.slice(),
+                    site: els.site.value,
+                    age: Number(els.age.value||0) || null,
+                    sex: els.sex.value,
+                    risks,
+                    offline: true
+                });
+                els.req.textContent = requestId ? 'Request-ID: '+requestId : '';
+                state.lastResult = json; renderResults(json);
+                // overlay vectors if provided
+                if(json && json.overlay) drawOverlay(json.overlay);
+                toast('Analysis complete');
+            } catch(err){
+                const msg = err?.message || 'Analysis failed'; toast(msg, 'err');
+            } finally { state.analyzing = false; els.analyze.textContent = 'Analyze'; updateAnalyzeEnabled(); }
+        });
+
+        function renderResults(json){
+            const top = (json?.diagnostics?.top3||[]).map(p=>({label:(p.label||'').replace(/_/g,' '), pct: Math.round((p.prob||0)*100)}));
+            const primary = top[0]?.label || '—';
+            const flap = json?.reconstruction?.primary?.type || json?.reconstruction?.suggestion || null;
+            els.results.innerHTML = '';
+            const container = document.createElement('div');
+            if(top.length){
+                top.forEach(item=>{
+                    const row = document.createElement('div'); row.style.margin = '6px 0';
+                    row.innerHTML = `<div class="row" style="justify-content:space-between"><strong>${item.label}</strong><span>${item.pct}%</span></div><div class="bar"><span style="width:${item.pct}%"></span></div>`;
+                    container.appendChild(row);
+                });
+            }
+            const primaryEl = document.createElement('div'); primaryEl.style.margin = '10px 0 0'; primaryEl.innerHTML = `<span class="pill">Primary</span> <strong>${primary}</strong>`; container.appendChild(primaryEl);
+            if(flap){ const flapEl = document.createElement('div'); flapEl.style.marginTop='10px'; flapEl.innerHTML = `<span class="pill">Flap</span> ${flap}`; container.appendChild(flapEl); }
+
+            // Flap geometry & guideline info
+            const flapPlan = json?.flap_plan || json?.reconstruction?.primary || null;
+            if(flapPlan && flapPlan.params && (flapPlan.params.geometry || flapPlan.params.indications)){
+                const p = flapPlan.params;
+                const infoDiv = document.createElement('div');
+                infoDiv.style = 'border:1px solid #1976d2; background:#f5faff; border-radius:8px; padding:12px; margin-top:16px;';
+                infoDiv.innerHTML = `
+                    <h4 style="color:#1976d2; margin-bottom:4px;">Flap Geometry & Guidelines</h4>
+                    <b>Type:</b> ${flapPlan.type}<br>
+                    <b>Geometry:</b> ${p.geometry}<br>
+                    <b>Indications:</b> <span style="color:#388e3c">${p.indications}</span><br>
+                    <b>Contraindications:</b> <span style="color:#d32f2f">${p.contraindications}</span><br>
+                    <b>How-to:</b> <span style="color:#333">${p.howto}</span>
+                `;
+                container.appendChild(infoDiv);
+            }
+
+            // Oncology gates and margins
+            const onc = json?.oncology || {};
+            const gates = onc?.gates || {};
+            const oncDiv = document.createElement('div'); oncDiv.style.marginTop = '12px';
+            const gateStr = Object.keys(gates).length ? Object.entries(gates).map(([k,v])=>`${k.replace(/_/g,' ')}: ${v?'Yes':'No'}`).join(' • ') : '';
+            oncDiv.innerHTML = `<span class="pill">Oncology</span> Margin: ${onc?.recommended_margin_mm??'—'} mm ${gateStr? ' • '+gateStr:''}`;
+            container.appendChild(oncDiv);
+
+            // Protocol / guideline info
+            const proto = json?.protocol;
+            if(proto){
+                const pDiv = document.createElement('div'); pDiv.style.marginTop='10px';
+                const srcs = (proto.sources||[]).slice(0,5).join(', ');
+                pDiv.innerHTML = `<span class="pill">Protocol</span> ${proto.name||'SurgicalAI Clinical Protocol'} v${proto.version||''}${srcs? ' — Sources: '+srcs:''}`;
+                container.appendChild(pDiv);
+            }
+
+            // Citations
+            const cites = json?.citations || [];
+            if(cites.length){
+                const cDiv = document.createElement('div'); cDiv.style.marginTop='10px';
+                cDiv.innerHTML = `<span class="pill">Citations</span> ${cites.map(c=>`<span class="small">${c}</span>`).join(' • ')}`;
+                container.appendChild(cDiv);
+            }
+            els.results.appendChild(container);
+        }
+
+        function drawOverlay(overlay){
+            // Redraw base image and ROI
+            fitAndDraw();
+            const dpr = window.devicePixelRatio || 1; const w = els.canvas.width/dpr; const h = els.canvas.height/dpr;
+            ctx.save(); ctx.lineWidth = 2; ctx.strokeStyle = '#3fb950';
+            const poly = overlay?.excision?.points||[]; if(poly.length>1){ ctx.beginPath(); for(let i=0;i<poly.length;i++){ const [x,y]=poly[i]; const cx=x*w, cy=y*h; if(i===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);} ctx.closePath(); ctx.stroke(); }
+            // Fix RSTL orientation: always use correct angle from backend
+            const cl = overlay?.closure?.lines?.[0];
+            if(cl){
+                ctx.strokeStyle = '#58a6ff';
+                ctx.beginPath();
+                ctx.moveTo(cl[0][0]*w, cl[0][1]*h);
+                ctx.lineTo(cl[1][0]*w, cl[1][1]*h);
+                ctx.stroke();
+            }
+            const flap = overlay?.overlay_flap_points || overlay?.flap?.points || [];
+            if(flap.length>1){
+                ctx.strokeStyle = '#ffb100';
+                ctx.beginPath();
+                for(let i=0;i<flap.length;i++){
+                    const [x,y]=flap[i];
+                    const cx=x*w, cy=y*h;
+                    if(i===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);
+                }
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // Reset
+        els.reset.addEventListener('click', ()=>{
+            state.img = null; state.imgDataUrl = null; state.file = null; state.pts = []; state.polyActive = false;
+            els.file.value = ''; els.dropMsg.textContent = 'Drop image here or click to choose'; els.site.value = ''; els.age.value=''; els.sex.value='Male'; els.hZone.checked = els.ill.checked = els.rec.checked = false; els.results.innerHTML = '<div class="small">No results yet.</div>'; els.req.textContent=''; els.doctor.value='';
+            state.lastResult = null;
+            ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,els.canvas.width,els.canvas.height); updateAnalyzeEnabled();
+        });
+
+        // Export PDF
+        els.exportPdf = document.getElementById('exportPdf');
+        els.doctor = document.getElementById('doctor');
+        els.exportPdf.addEventListener('click', async ()=>{
+            if(!state.lastResult){ toast('Run an analysis first','err'); return; }
+            try{
+                const { blob, requestId } = await surgicalAI.generateReport(state.lastResult, els.doctor.value || null);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const ts = new Date().toISOString().replace(/[:.]/g,'-');
+                a.href = url; a.download = `surgical_report_${requestId||ts}.pdf`; a.click();
+                URL.revokeObjectURL(url);
+                toast('PDF downloaded');
+            }catch(err){ toast(err?.message||'PDF export failed','err'); }
+        });
     </script>
 </body>
 </html>
